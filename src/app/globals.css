@@ -1,0 +1,265 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-input-border;
+  }
+
+  body {
+    @apply font-sans text-text-primary bg-background;
+  }
+
+  /* Remove default focus outline and add custom */
+  *:focus {
+    @apply outline-none;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-input-bg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-secondary rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary;
+  }
+}
+
+@layer components {
+  /* ===== BOTÕES ===== */
+
+  /* Botão Primário */
+  .btn-primary {
+    @apply h-input px-6 bg-primary text-white font-semibold text-body-lg rounded-sm
+           hover:bg-[#2a2a2a] active:bg-[#333333]
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-colors duration-200
+           flex items-center justify-center gap-2;
+  }
+
+  /* Botão Secundário */
+  .btn-secondary {
+    @apply h-input px-6 bg-white text-primary font-semibold text-body-lg rounded-sm
+           border border-primary
+           hover:bg-input-bg active:bg-[#EBEBEB]
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-colors duration-200
+           flex items-center justify-center gap-2;
+  }
+
+  /* Botão Danger */
+  .btn-danger {
+    @apply h-input px-6 bg-white text-error font-semibold text-body-lg rounded-sm
+           border border-error
+           hover:bg-error-light active:bg-error active:text-white
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-colors duration-200
+           flex items-center justify-center gap-2;
+  }
+
+  /* Botão Ghost */
+  .btn-ghost {
+    @apply h-input px-6 bg-transparent text-primary font-semibold text-body-lg rounded-sm
+           hover:bg-input-bg active:bg-[#EBEBEB]
+           disabled:opacity-50 disabled:cursor-not-allowed
+           transition-colors duration-200
+           flex items-center justify-center gap-2;
+  }
+
+  /* Botão Tamanho Pequeno */
+  .btn-sm {
+    @apply h-input-sm px-4 text-body;
+  }
+
+  /* ===== INPUTS ===== */
+
+  /* Input padrão */
+  .input-default {
+    @apply h-input w-full px-4 bg-input-bg border border-input-border rounded-sm
+           text-body-lg text-text-primary placeholder:text-text-muted
+           focus:border-primary focus:ring-0
+           disabled:opacity-60 disabled:cursor-not-allowed
+           transition-colors duration-200;
+  }
+
+  /* Input com erro */
+  .input-error {
+    @apply border-error focus:border-error;
+  }
+
+  /* Label padrão */
+  .label-default {
+    @apply text-caption font-medium text-text-secondary uppercase tracking-wider mb-2 block;
+  }
+
+  /* Mensagem de erro */
+  .error-message {
+    @apply text-caption text-error mt-1;
+  }
+
+  /* Helper text */
+  .helper-text {
+    @apply text-caption text-text-muted mt-1;
+  }
+
+  /* ===== CARDS ===== */
+
+  /* Card padrão */
+  .card-default {
+    @apply bg-white border border-input-border rounded-md p-4;
+  }
+
+  /* Card com fundo */
+  .card-filled {
+    @apply bg-input-bg rounded-md p-4;
+  }
+
+  /* Card outlined */
+  .card-outlined {
+    @apply bg-transparent border border-input-border rounded-md p-4;
+  }
+
+  /* Card destaque (fundo preto) */
+  .card-highlight {
+    @apply bg-primary text-white rounded-md p-4;
+  }
+
+  /* ===== BADGES ===== */
+
+  .badge {
+    @apply inline-flex items-center px-2 py-1 text-caption font-medium rounded-sm;
+  }
+
+  .badge-dark {
+    @apply badge bg-primary text-white;
+  }
+
+  .badge-success {
+    @apply badge bg-success text-white;
+  }
+
+  .badge-error {
+    @apply badge bg-error text-white;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning text-white;
+  }
+
+  .badge-light {
+    @apply badge bg-input-bg text-text-secondary;
+  }
+
+  /* ===== TIPOGRAFIA ===== */
+
+  .heading-primary {
+    @apply text-header font-bold text-text-primary;
+  }
+
+  .heading-secondary {
+    @apply text-title font-bold text-text-primary;
+  }
+
+  .heading-tertiary {
+    @apply text-subtitle font-semibold text-text-primary;
+  }
+
+  .section-title {
+    @apply text-subtitle font-bold text-text-primary;
+  }
+
+  /* ===== DIVIDERS ===== */
+
+  .divider {
+    @apply h-px bg-input-border w-full;
+  }
+
+  .divider-vertical {
+    @apply w-px bg-input-border h-full;
+  }
+
+  /* ===== CONTAINERS ===== */
+
+  .page-container {
+    @apply p-lg;
+  }
+
+  .page-header {
+    @apply mb-lg;
+  }
+
+  /* ===== SKELETON ===== */
+
+  .skeleton {
+    @apply animate-pulse bg-input-bg rounded;
+  }
+
+  /* ===== SIDEBAR ===== */
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-4 py-3 text-white/70 rounded-sm
+           hover:bg-white/10 hover:text-white
+           transition-colors duration-200;
+  }
+
+  .sidebar-item-active {
+    @apply sidebar-item bg-white/15 text-white border-l-2 border-white;
+  }
+
+  .sidebar-item-highlight {
+    @apply flex items-center gap-3 px-4 py-3 bg-white text-primary font-semibold rounded-sm
+           hover:bg-white/90
+           transition-colors duration-200;
+  }
+
+  /* ===== CHIPS/FILTERS ===== */
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-2 text-body
+           bg-input-bg border border-input-border rounded-sm
+           cursor-pointer transition-colors duration-200
+           hover:border-primary;
+  }
+
+  .chip-active {
+    @apply chip bg-primary border-primary text-white;
+  }
+}
+
+@layer utilities {
+  /* Utilitário para esconder scrollbar mas manter funcionalidade */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Gradient para fade em listas */
+  .fade-bottom {
+    mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+  }
+}
+
+/* Safe area para dispositivos com notch */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Ajuste de altura considerando bottom nav */
+.min-h-screen-safe {
+  min-height: calc(100vh - env(safe-area-inset-bottom, 0px));
+}
