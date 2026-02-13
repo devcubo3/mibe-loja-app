@@ -103,6 +103,14 @@ export default function LoginPage() {
           </Button>
         </form>
 
+        {/* Create Account */}
+        <p className="text-center text-body text-text-secondary mt-lg">
+          Não tem uma conta?{' '}
+          <Link href="/criar-conta" className="text-primary font-semibold hover:underline">
+            Crie sua conta
+          </Link>
+        </p>
+
         {/* Version */}
         <p className="text-center text-caption text-text-muted mt-xl">
           Versão 1.0.0

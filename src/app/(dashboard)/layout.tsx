@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+import { OnboardingModal } from '@/components/onboarding';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Skeleton } from '@/components/ui';
@@ -16,9 +17,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { company, isLoading, isAuthenticated, logout, _hasHydrated } = useAuth();
+  const { company, user, token, isLoading, isAuthenticated, logout, updateUser, _hasHydrated } = useAuth();
   const { unreadCount } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     // Só redireciona após a hydration do Zustand e após carregar o estado
@@ -26,6 +28,13 @@ export default function DashboardLayout({
       router.push('/login');
     }
   }, [_hasHydrated, isLoading, isAuthenticated, router]);
+
+  // Mostrar onboarding se não foi concluído
+  useEffect(() => {
+    if (_hasHydrated && !isLoading && isAuthenticated && user && !user.onboarding_completed) {
+      setShowOnboarding(true);
+    }
+  }, [_hasHydrated, isLoading, isAuthenticated, user]);
 
   // Loading state - espera hydration e carregamento
   if (!_hasHydrated || isLoading) {
@@ -77,6 +86,26 @@ export default function DashboardLayout({
 
       {/* PWA Install Prompt */}
       <InstallPrompt />
+
+      {/* Onboarding */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        userName={user?.name || ''}
+        onComplete={async () => {
+          setShowOnboarding(false);
+          updateUser({ onboarding_completed: true });
+          try {
+            await fetch('/api/auth/onboarding', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+          } catch {}
+        }}
+        onSkip={() => {
+          setShowOnboarding(false);
+          // Pular não marca como concluído — vai aparecer de novo no próximo login
+        }}
+      />
     </div>
   );
 }

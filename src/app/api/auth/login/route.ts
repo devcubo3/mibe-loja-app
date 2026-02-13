@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
         email,
         password_hash,
         is_active,
+        onboarding_completed,
         created_at,
         updated_at
       `)
@@ -131,6 +132,7 @@ export async function POST(request: NextRequest) {
         name: companyUser.name,
         email: companyUser.email,
         company_id: companyUser.company_id,
+        onboarding_completed: companyUser.onboarding_completed || false,
         created_at: companyUser.created_at,
         updated_at: companyUser.updated_at,
       },

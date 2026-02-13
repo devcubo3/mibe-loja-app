@@ -100,8 +100,22 @@ export const useAuth = create<AuthStore>()(
               isAuthenticated: false,
               isLoading: false,
             });
-          } else {
-            // Token válido, manter autenticado
+            return;
+          }
+
+          // Token válido — buscar dados atualizados do servidor
+          try {
+            const response = await fetch('/api/auth/me', {
+              headers: { Authorization: `Bearer ${currentState.token}` },
+            });
+            if (response.ok) {
+              const data = await response.json();
+              set({ user: data.user, isLoading: false });
+            } else {
+              set({ isLoading: false });
+            }
+          } catch {
+            // Sem conexão, usar dados do cache
             set({ isLoading: false });
           }
         } catch {

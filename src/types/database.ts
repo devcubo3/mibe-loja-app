@@ -218,6 +218,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          onboarding_completed: boolean | null
           password_hash: string
           updated_at: string | null
         }
@@ -228,6 +229,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          onboarding_completed?: boolean | null
           password_hash: string
           updated_at?: string | null
         }
@@ -238,6 +240,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          onboarding_completed?: boolean | null
           password_hash?: string
           updated_at?: string | null
         }

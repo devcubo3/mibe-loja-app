@@ -4,6 +4,7 @@ export interface CompanyUser {
   name: string;
   email: string;
   company_id: string;
+  onboarding_completed?: boolean;
   created_at: string | null;
   updated_at: string | null;
 }
