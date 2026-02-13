@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Skeleton } from '@/components/ui';
@@ -72,6 +73,9 @@ export default function DashboardLayout({
         {/* Bottom Navigation (Mobile) */}
         <MobileNav onMoreClick={() => setSidebarOpen(true)} />
       </div>
+
+      {/* PWA Install Prompt */}
+      <InstallPrompt />
     </div>
   );
 }

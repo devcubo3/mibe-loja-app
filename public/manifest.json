@@ -1,0 +1,39 @@
+{
+  "name": "MIBE Store",
+  "short_name": "MIBE Store",
+  "description": "Painel da empresa MIBE - Gerencie vendas e cashback",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#181818",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["business", "finance"],
+  "shortcuts": [
+    {
+      "name": "Registrar Venda",
+      "short_name": "Nova Venda",
+      "description": "Registrar uma nova venda",
+      "url": "/registrar-venda"
+    },
+    {
+      "name": "Histórico",
+      "short_name": "Vendas",
+      "description": "Ver histórico de vendas",
+      "url": "/vendas"
+    }
+  ]
+}
