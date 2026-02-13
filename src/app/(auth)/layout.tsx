@@ -1,3 +1,7 @@
+'use client';
+
+import { InstallPrompt } from '@/components/pwa/InstallPrompt';
+
 export default function AuthLayout({
   children,
 }: {
@@ -6,6 +10,7 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {children}
+      <InstallPrompt />
     </div>
   );
 }
