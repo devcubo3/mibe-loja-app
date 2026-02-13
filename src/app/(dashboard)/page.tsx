@@ -7,18 +7,18 @@ import { getGreeting, formatCurrency } from '@/lib/formatters';
 import { StatCard, QuickActions, RecentSales } from '@/components/dashboard';
 
 export default function HomePage() {
-  const { company } = useAuth();
+  const { company, user } = useAuth();
   const { stats, isLoading, calculateTrend } = useSales();
 
   const greeting = getGreeting();
+  const firstName = user?.name?.split(' ')[0] || '';
 
   return (
     <div className="page-container">
       {/* Header */}
       <div className="page-header">
         <h1 className="text-header">
-          {greeting}
-          {company?.business_name && `, ${company.business_name}`}!
+          {greeting}{firstName && `, ${firstName}`}!
         </h1>
         <p className="text-body text-text-secondary">
           Aqui está o resumo do seu dia

@@ -4,11 +4,13 @@ import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { loadUser } = useAuth();
+  const { loadUser, _hasHydrated } = useAuth();
 
   useEffect(() => {
-    loadUser();
-  }, [loadUser]);
+    if (_hasHydrated) {
+      loadUser();
+    }
+  }, [_hasHydrated, loadUser]);
 
   return <>{children}</>;
 }

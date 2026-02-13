@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { Toaster } from 'sonner';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import "./globals.css";
 
@@ -45,6 +46,15 @@ export default function RootLayout({
       </head>
       <body className={`${plusJakartaSans.variable} font-sans antialiased`}>
         <AuthProvider>{children}</AuthProvider>
+        <Toaster
+          position="top-center"
+          richColors
+          toastOptions={{
+            style: {
+              fontFamily: 'var(--font-plus-jakarta)',
+            },
+          }}
+        />
       </body>
     </html>
   );

@@ -21,7 +21,19 @@
       "mcp__supabase__list_edge_functions",
       "Bash(npm install:*)",
       "Bash(npx next build)",
-      "mcp__supabase__get_project"
+      "mcp__supabase__get_project",
+      "Bash(ls:*)",
+      "Bash(if not exist \"public\\\\icons\" mkdir \"public\\\\icons\")",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(git push:*)",
+      "Bash(git rm:*)",
+      "Bash(npx -y @supabase/mcp-server-supabase@latest --project-ref=xzzbxzusgtfymdhagszp --help)",
+      "Bash(set SUPABASE_ACCESS_TOKEN=sbp_71dd78d27d9fb62fd720dd2a61fb509f2c5c1189)",
+      "Bash(npx:*)",
+      "Bash(cmd /c \"npx -y @supabase/mcp-server-supabase@latest --project-ref=xzzbxzusgtfymdhagszp --access-token=sbp_71dd78d27d9fb62fd720dd2a61fb509f2c5c1189\")"
     ]
   },
   "enableAllProjectMcpServers": true,

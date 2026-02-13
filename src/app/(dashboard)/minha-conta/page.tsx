@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronRight,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, Button, Input } from '@/components/ui';
 import {
@@ -32,7 +33,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function MinhaContaPage() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -83,9 +84,27 @@ export default function MinhaContaPage() {
     currentPassword: string;
     newPassword: string;
   }) => {
-    console.log('Trocar senha:', data);
-    // Aqui seria a chamada para API
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao trocar senha');
+      }
+
+      toast.success('Senha alterada com sucesso!');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao trocar senha');
+      throw error; // Re-throw para o modal não fechar
+    }
   };
 
   const handleWhatsAppSupport = () => {

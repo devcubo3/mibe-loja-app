@@ -16,18 +16,19 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { company, isLoading, isAuthenticated, logout } = useAuth();
+  const { company, isLoading, isAuthenticated, logout, _hasHydrated } = useAuth();
   const { unreadCount } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    // Só redireciona após a hydration do Zustand e após carregar o estado
+    if (_hasHydrated && !isLoading && !isAuthenticated) {
       router.push('/login');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [_hasHydrated, isLoading, isAuthenticated, router]);
 
-  // Loading state
-  if (isLoading) {
+  // Loading state - espera hydration e carregamento
+  if (!_hasHydrated || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="space-y-md w-full max-w-md p-lg">

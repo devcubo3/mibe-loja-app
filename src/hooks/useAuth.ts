@@ -5,6 +5,8 @@ import { persist } from 'zustand/middleware';
 import type { CompanyUser, CompanyData, AuthState, LoginCredentials, AuthError, LoginResponse } from '@/types/auth';
 
 interface AuthStore extends AuthState {
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
   login: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: AuthError }>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
@@ -20,8 +22,10 @@ export const useAuth = create<AuthStore>()(
       user: null,
       company: null,
       token: null,
-      isLoading: false,
+      isLoading: true,
       isAuthenticated: false,
+      _hasHydrated: false,
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
 
       setLoading: (loading) => set({ isLoading: loading }),
 
@@ -96,6 +100,9 @@ export const useAuth = create<AuthStore>()(
               isAuthenticated: false,
               isLoading: false,
             });
+          } else {
+            // Token válido, manter autenticado
+            set({ isLoading: false });
           }
         } catch {
           // Token inválido
@@ -155,6 +162,9 @@ export const useAuth = create<AuthStore>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
