@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { CheckCircle } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
-import type { Sale } from '@/types/sale';
+import type { SaleWithCustomer } from '@/types/sale';
 
 interface SaleConfirmationProps {
-  sale: Sale;
+  sale: SaleWithCustomer;
   onNewSale: () => void;
 }
 
@@ -30,31 +30,31 @@ export function SaleConfirmation({ sale, onNewSale }: SaleConfirmationProps) {
       {/* Sale Details */}
       <Card variant="filled" padding="lg">
         <div className="space-y-sm text-left">
-          <DetailRow label="Cliente" value={sale.customer_name || '-'} />
+          <DetailRow label="Cliente" value={sale.customer?.full_name || '-'} />
           <DetailRow
             label="Valor da compra"
-            value={formatCurrency(sale.purchase_amount || 0)}
+            value={formatCurrency(sale.total_amount || 0)}
           />
-          {sale.balance_used && sale.balance_used > 0 && (
+          {sale.cashback_redeemed > 0 && (
             <DetailRow
               label="Saldo usado"
-              value={`- ${formatCurrency(sale.balance_used)}`}
+              value={`- ${formatCurrency(sale.cashback_redeemed)}`}
               valueClass="text-error"
             />
           )}
           <DetailRow
             label="Valor pago"
-            value={formatCurrency(sale.amount_paid || 0)}
+            value={formatCurrency(sale.net_amount_paid || 0)}
             bold
           />
           <DetailRow
             label="Cashback gerado"
-            value={`+ ${formatCurrency(sale.cashback_generated || 0)}`}
+            value={`+ ${formatCurrency(sale.cashback_earned || 0)}`}
             valueClass="text-success"
           />
           <DetailRow
             label="Data"
-            value={formatDateTime(sale.created_at)}
+            value={sale.created_at ? formatDateTime(sale.created_at) : '-'}
             valueClass="text-text-secondary"
           />
         </div>

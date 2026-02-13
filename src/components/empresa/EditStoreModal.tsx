@@ -7,26 +7,23 @@ import { z } from 'zod';
 import { Modal, ModalFooter } from '@/components/ui/Modal';
 import { Button, Input } from '@/components/ui';
 import {
-  formatPhone,
   formatCurrency,
   parseCurrencyInput,
   formatCurrencyInput,
 } from '@/lib/formatters';
-import type { Store, StoreUpdateData } from '@/types/store';
-import { STORE_CATEGORIES } from '@/types/store';
+import type { CompanyData } from '@/types/auth';
+import type { StoreUpdateData } from '@/types/store';
+import { storeService } from '@/services/storeService';
+import { useEffect } from 'react';
 
 const schema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100, 'Nome deve ter no máximo 100 caracteres'),
-  email: z.string().email('E-mail inválido'),
-  phone: z.string().min(14, 'Telefone inválido'),
-  whatsapp: z.string().min(14, 'WhatsApp inválido'),
-  address: z.string().min(5, 'Endereço deve ter no mínimo 5 caracteres'),
+  email: z.string().email('E-mail inválido').optional().or(z.literal('')),
   category: z.string().min(1, 'Selecione uma categoria'),
   description: z.string().max(500, 'Descrição deve ter no máximo 500 caracteres').optional(),
   cashback_percentage: z.string(),
   has_expiration: z.boolean(),
   expiration_days: z.string().optional(),
-  has_min_purchase: z.boolean(),
   min_purchase: z.string().optional(),
 });
 
@@ -35,7 +32,7 @@ type FormData = z.infer<typeof schema>;
 interface EditStoreModalProps {
   isOpen: boolean;
   onClose: () => void;
-  store: Store;
+  store: CompanyData;
   onSave: (data: StoreUpdateData) => Promise<void>;
 }
 
@@ -46,6 +43,15 @@ export function EditStoreModal({
   onSave,
 }: EditStoreModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState<{ id: number, name: string }[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      storeService.getCategories()
+        .then(setCategories)
+        .catch(console.error);
+    }
+  }, [isOpen]);
 
   const {
     register,
@@ -56,42 +62,36 @@ export function EditStoreModal({
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: store.name,
-      email: store.email,
-      phone: formatPhone(store.phone || ''),
-      whatsapp: formatPhone(store.whatsapp || store.phone || ''),
-      address: store.address || '',
+      name: store.business_name,
+      email: store.email || '',
       category: store.category || 'Alimentação',
       description: store.description || '',
-      cashback_percentage: store.cashback_percentage.toString(),
+      cashback_percentage: store.cashback_percent.toString(),
       has_expiration: store.has_expiration,
       expiration_days: store.expiration_days?.toString() || '90',
-      has_min_purchase: store.has_min_purchase,
-      min_purchase: formatCurrency(store.min_purchase || 0),
+      min_purchase: formatCurrency(store.min_purchase_value || 0),
     },
   });
 
   const descriptionValue = watch('description') || '';
   const hasExpiration = watch('has_expiration');
-  const hasMinPurchase = watch('has_min_purchase');
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
 
     try {
+      const selectedCategory = categories.find(c => c.name === data.category);
+
       await onSave({
         name: data.name,
         email: data.email,
-        phone: data.phone.replace(/\D/g, ''),
-        whatsapp: data.whatsapp.replace(/\D/g, ''),
-        address: data.address,
         category: data.category,
+        category_id: selectedCategory?.id,
         description: data.description,
         cashback_percentage: parseFloat(data.cashback_percentage),
         has_expiration: data.has_expiration,
         expiration_days: data.has_expiration ? parseInt(data.expiration_days || '90') : undefined,
-        has_min_purchase: data.has_min_purchase,
-        min_purchase: data.has_min_purchase ? parseCurrencyInput(data.min_purchase || '0') : undefined,
+        min_purchase: parseCurrencyInput(data.min_purchase || '0'),
       });
 
       onClose();
@@ -134,9 +134,9 @@ export function EditStoreModal({
             {...register('category')}
             className="w-full h-[56px] px-md bg-input-bg border border-input-border rounded-lg text-body text-text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
           >
-            {STORE_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.name}>
+                {cat.name}
               </option>
             ))}
           </select>
@@ -169,36 +169,6 @@ export function EditStoreModal({
               {descriptionValue.length}/500
             </p>
           </div>
-        </div>
-
-        {/* Endereço */}
-        <Input
-          label="Endereço"
-          error={errors.address?.message}
-          {...register('address')}
-        />
-
-        {/* Telefones */}
-        <div className="grid grid-cols-2 gap-md">
-          <Input
-            label="Telefone"
-            error={errors.phone?.message}
-            {...register('phone', {
-              onChange: (e) => {
-                setValue('phone', formatPhone(e.target.value));
-              },
-            })}
-          />
-
-          <Input
-            label="WhatsApp"
-            error={errors.whatsapp?.message}
-            {...register('whatsapp', {
-              onChange: (e) => {
-                setValue('whatsapp', formatPhone(e.target.value));
-              },
-            })}
-          />
         </div>
 
         <div className="h-px bg-input-border" />
@@ -261,39 +231,22 @@ export function EditStoreModal({
 
         {/* Compra mínima */}
         <div className="bg-input-bg rounded-lg p-md">
-          <div className="flex items-center justify-between mb-sm">
-            <div>
-              <p className="text-body font-medium text-text-primary">
-                Compra mínima
-              </p>
-              <p className="text-caption text-text-muted">
-                Valor mínimo para gerar cashback
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                {...register('has_min_purchase')}
-              />
-              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-            </label>
-          </div>
-
-          {hasMinPurchase && (
-            <div className="mt-md">
-              <Input
-                label="Valor mínimo"
-                error={errors.min_purchase?.message}
-                {...register('min_purchase', {
-                  onChange: (e) => {
-                    const formatted = formatCurrencyInput(e.target.value);
-                    setValue('min_purchase', formatted);
-                  },
-                })}
-              />
-            </div>
-          )}
+          <p className="text-body font-medium text-text-primary mb-xs">
+            Compra mínima
+          </p>
+          <p className="text-caption text-text-muted mb-sm">
+            Valor mínimo para gerar cashback (0 = sem mínimo)
+          </p>
+          <Input
+            label="Valor mínimo"
+            error={errors.min_purchase?.message}
+            {...register('min_purchase', {
+              onChange: (e) => {
+                const formatted = formatCurrencyInput(e.target.value);
+                setValue('min_purchase', formatted);
+              },
+            })}
+          />
         </div>
 
         <ModalFooter>

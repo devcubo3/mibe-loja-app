@@ -15,7 +15,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { store, isLoading, isAuthenticated, logout } = useAuth();
+  const { company, isLoading, isAuthenticated, logout } = useAuth();
   const { unreadCount } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -51,7 +51,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
       <Sidebar
-        storeName={store?.name || 'Minha Loja'}
+        storeName={company?.business_name || 'Minha Loja'}
         notificationCount={unreadCount}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

@@ -5,6 +5,7 @@ interface StatCardProps {
   title: string;
   value: string;
   icon: LucideIcon;
+  variant?: 'primary' | 'success' | 'warning' | 'info' | 'purple';
   trend?: {
     value: number;
     isPositive: boolean;
@@ -12,9 +13,41 @@ interface StatCardProps {
   subtitle?: string;
 }
 
-export function StatCard({ title, value, icon: Icon, trend, subtitle }: StatCardProps) {
+export function StatCard({
+  title,
+  value,
+  icon: Icon,
+  variant = 'primary',
+  trend,
+  subtitle,
+}: StatCardProps) {
+  const variantStyles = {
+    primary: {
+      bg: 'bg-primary-light',
+      icon: 'text-primary',
+    },
+    success: {
+      bg: 'bg-success-light',
+      icon: 'text-success',
+    },
+    warning: {
+      bg: 'bg-warning-light',
+      icon: 'text-warning',
+    },
+    info: {
+      bg: 'bg-info-light',
+      icon: 'text-info',
+    },
+    purple: {
+      bg: 'bg-purple-light',
+      icon: 'text-purple',
+    },
+  };
+
+  const style = variantStyles[variant];
+
   return (
-    <Card>
+    <Card hoverable>
       <CardContent className="p-lg">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -24,8 +57,10 @@ export function StatCard({ title, value, icon: Icon, trend, subtitle }: StatCard
               <p className="text-caption text-text-muted">{subtitle}</p>
             )}
           </div>
-          <div className="w-12 h-12 bg-primary-light rounded-lg flex items-center justify-center flex-shrink-0">
-            <Icon className="w-6 h-6 text-primary" />
+          <div
+            className={`w-12 h-12 ${style.bg} rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-200`}
+          >
+            <Icon className={`w-6 h-6 ${style.icon}`} />
           </div>
         </div>
 
@@ -38,9 +73,8 @@ export function StatCard({ title, value, icon: Icon, trend, subtitle }: StatCard
                 <TrendingDown className="w-4 h-4 text-error" />
               )}
               <span
-                className={`text-caption font-medium ${
-                  trend.isPositive ? 'text-success' : 'text-error'
-                }`}
+                className={`text-caption font-medium ${trend.isPositive ? 'text-success' : 'text-error'
+                  }`}
               >
                 {trend.value > 0 ? '+' : ''}
                 {trend.value}%

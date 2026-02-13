@@ -6,7 +6,7 @@ import { Camera, Loader2 } from 'lucide-react';
 interface CoverUploadProps {
   currentCover?: string | null;
   storeId: string;
-  onUpload: (url: string) => void;
+  onUpload: (url: string, file?: File) => void;
 }
 
 export function CoverUpload({
@@ -44,7 +44,7 @@ export function CoverUpload({
     reader.onload = (event) => {
       const url = event.target?.result as string;
       setPreviewUrl(url);
-      onUpload(url);
+      onUpload(url, file);
       setIsUploading(false);
     };
     reader.onerror = () => {

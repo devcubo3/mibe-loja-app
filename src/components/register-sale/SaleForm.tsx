@@ -95,7 +95,7 @@ export function SaleForm({
       {/* Customer Info */}
       <div className="bg-input-bg rounded-md p-md">
         <p className="text-caption text-text-muted">Cliente</p>
-        <p className="font-semibold">{customer.name}</p>
+        <p className="font-semibold">{customer.full_name}</p>
         <p className="text-body text-text-secondary">
           CPF: {formatCPF(customer.cpf)}
         </p>

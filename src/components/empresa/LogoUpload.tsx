@@ -7,7 +7,7 @@ interface LogoUploadProps {
   currentLogo?: string | null;
   storeName: string;
   storeId: string;
-  onUpload: (url: string) => void;
+  onUpload: (url: string, file?: File) => void;
   size?: 'sm' | 'md' | 'lg';
   showButton?: boolean;
 }
@@ -63,7 +63,7 @@ export function LogoUpload({
     reader.onload = (event) => {
       const url = event.target?.result as string;
       setPreviewUrl(url);
-      onUpload(url);
+      onUpload(url, file);
       setIsUploading(false);
     };
     reader.onerror = () => {

@@ -39,6 +39,7 @@ export interface StoreUpdateData {
   expiration_days?: number;
   has_min_purchase?: boolean;
   min_purchase?: number;
+  category_id?: number;
 }
 
 export interface Review {

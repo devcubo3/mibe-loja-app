@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useSales } from '@/hooks/useSales';
 import { QRScanner } from '@/components/register-sale/QRScanner';
 import { CPFInput } from '@/components/register-sale/CPFInput';
 import { CustomerPreview } from '@/components/register-sale/CustomerPreview';
@@ -11,52 +13,18 @@ import { SaleForm, SaleData } from '@/components/register-sale/SaleForm';
 import { SaleConfirmation } from '@/components/register-sale/SaleConfirmation';
 import { Divider } from '@/components/ui';
 import type { CustomerWithBalance } from '@/types/customer';
-import type { Sale } from '@/types/sale';
+import type { SaleWithCustomer } from '@/types/sale';
 
 type Step = 'identify' | 'preview' | 'form' | 'confirmation';
 
-// Dados mockados
-const MOCK_CUSTOMERS: Record<string, CustomerWithBalance> = {
-  '12345678901': {
-    id: 'cust-1',
-    name: 'João Silva',
-    cpf: '12345678901',
-    email: 'joao@email.com',
-    phone: '11999999999',
-    created_at: new Date().toISOString(),
-    storeBalance: {
-      customer_id: 'cust-1',
-      store_id: 'mock-store-123',
-      balance: 125.50,
-      total_purchases: 12,
-      total_spent: 2500,
-      total_cashback: 250,
-    },
-  },
-  '98765432101': {
-    id: 'cust-2',
-    name: 'Maria Santos',
-    cpf: '98765432101',
-    email: 'maria@email.com',
-    phone: '11988888888',
-    created_at: new Date().toISOString(),
-    storeBalance: {
-      customer_id: 'cust-2',
-      store_id: 'mock-store-123',
-      balance: 75.00,
-      total_purchases: 5,
-      total_spent: 750,
-      total_cashback: 75,
-    },
-  },
-};
-
 export default function RegisterSalePage() {
-  const { store } = useAuth();
+  const { company } = useAuth();
+  const { findCustomerByCpf, getCustomerById } = useCustomers();
+  const { createSale } = useSales();
 
   const [step, setStep] = useState<Step>('identify');
   const [customer, setCustomer] = useState<CustomerWithBalance | null>(null);
-  const [sale, setSale] = useState<Sale | null>(null);
+  const [sale, setSale] = useState<SaleWithCustomer | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,66 +41,75 @@ export default function RegisterSalePage() {
     }
   };
 
-  const searchCustomer = (cpf: string) => {
+  const searchCustomer = async (cpf: string) => {
     setIsLoading(true);
     setError(null);
 
-    const customerData = MOCK_CUSTOMERS[cpf];
+    try {
+      const customerData = await findCustomerByCpf(cpf);
 
-    if (!customerData) {
-      setError('Cliente não encontrado');
+      if (!customerData) {
+        setError('Cliente não encontrado');
+        setIsLoading(false);
+        return;
+      }
+
+      setCustomer(customerData);
+      setStep('preview');
+    } catch (err) {
+      setError('Erro ao buscar cliente');
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    setCustomer(customerData);
-    setStep('preview');
-    setIsLoading(false);
   };
 
-  const searchCustomerById = (id: string) => {
+  const searchCustomerById = async (id: string) => {
     setIsLoading(true);
     setError(null);
 
-    const customerData = Object.values(MOCK_CUSTOMERS).find(c => c.id === id);
+    try {
+      const customerData = await getCustomerById(id);
 
-    if (!customerData) {
-      setError('Cliente não encontrado');
+      if (!customerData) {
+        setError('Cliente não encontrado');
+        setIsLoading(false);
+        return;
+      }
+
+      setCustomer(customerData);
+      setStep('preview');
+    } catch (err) {
+      setError('Erro ao buscar cliente');
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    setCustomer(customerData);
-    setStep('preview');
-    setIsLoading(false);
   };
 
-  const handleConfirmSale = (data: SaleData) => {
-    if (!customer || !store) return;
+  const handleConfirmSale = async (data: SaleData) => {
+    if (!customer || !company) return;
 
     setIsLoading(true);
 
-    const newSale: Sale = {
-      id: `sale-${Date.now()}`,
-      store_id: store.id,
-      customer_id: customer.id,
-      customer_name: customer.name,
-      customer_cpf: customer.cpf,
-      purchase_amount: data.purchaseAmount,
-      balance_used: data.balanceUsed,
-      amount_paid: data.amountPaid,
-      cashback_generated: data.cashbackGenerated,
-      amount: data.amountPaid,
-      cashback_amount: data.cashbackGenerated,
-      cashback_percentage: store.cashback_percentage,
-      status: 'confirmed',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    try {
+      const result = await createSale({
+        user_id: customer.id,
+        total_amount: data.purchaseAmount,
+        cashback_redeemed: data.balanceUsed,
+        net_amount_paid: data.amountPaid,
+        cashback_earned: data.cashbackGenerated,
+      });
 
-    setSale(newSale);
-    setStep('confirmation');
-    setIsLoading(false);
+      if (result.success && result.sale) {
+        setSale(result.sale);
+        setStep('confirmation');
+      } else {
+        setError(result.error || 'Erro ao registrar venda');
+      }
+    } catch (err) {
+      setError('Erro ao registrar venda');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleNewSale = () => {
@@ -195,10 +172,10 @@ export default function RegisterSalePage() {
         />
       )}
 
-      {step === 'form' && customer && store && (
+      {step === 'form' && customer && company && (
         <SaleForm
           customer={customer}
-          cashbackPercentage={store.cashback_percentage}
+          cashbackPercentage={company.cashback_percent}
           onConfirm={handleConfirmSale}
           onCancel={handleCancel}
           isLoading={isLoading}

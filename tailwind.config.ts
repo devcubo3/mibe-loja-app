@@ -30,15 +30,20 @@ const config: Config = {
         error: '#FF3B30',
         success: '#34C759',
         warning: '#FF9500',
+        info: '#007AFF',
+        purple: '#7C3AED',
 
         // Cores específicas
         star: '#FFB800',
         whatsapp: '#25D366',
 
         // Cores de fundo para ícones (com opacidade)
+        'primary-light': '#F0F0F0',
         'success-light': '#E8F5E9',
         'error-light': '#FFEBEE',
         'warning-light': '#FFF3E0',
+        'info-light': '#E3F2FD',
+        'purple-light': '#F5F3FF',
       },
       fontSize: {
         caption: ['12px', { lineHeight: '16px' }],

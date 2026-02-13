@@ -7,11 +7,11 @@ import { Card, Button } from '@/components/ui';
 const SUPPORT_WHATSAPP = '5511999999999';
 
 export default function SuportePage() {
-  const { store } = useAuth();
+  const { company } = useAuth();
 
   const handleWhatsAppSupport = () => {
     const message = encodeURIComponent(
-      `Olá! Preciso de ajuda com minha loja ${store?.name || ''} (CNPJ: ${store?.cnpj || ''}).`
+      `Olá! Preciso de ajuda com minha loja ${company?.business_name || ''} (CNPJ: ${company?.cnpj || ''}).`
     );
     window.open(`https://wa.me/${SUPPORT_WHATSAPP}?text=${message}`, '_blank');
   };

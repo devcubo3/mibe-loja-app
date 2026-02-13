@@ -1,34 +1,32 @@
+// Tipos baseados na estrutura real do banco de dados (transactions)
 export interface Sale {
   id: string;
-  store_id: string;
-  customer_id: string;
-  customer_name?: string;
-  customer_cpf?: string;
-  purchase_amount?: number;
-  balance_used?: number;
-  amount_paid?: number;
-  cashback_generated?: number;
-  amount: number;
-  cashback_amount: number;
-  cashback_percentage: number;
-  status: 'pending' | 'approved' | 'cancelled' | 'confirmed';
-  created_at: string;
-  updated_at: string;
+  company_id: string | null;
+  user_id: string | null;
+  total_amount: number;
+  cashback_redeemed: number;
+  net_amount_paid: number;
+  cashback_earned: number;
+  admin_fee_amount: number | null;
+  created_at: string | null;
 }
 
+// Cliente (profile do cliente que comprou)
 export interface Customer {
   id: string;
-  name: string;
+  full_name: string;
   cpf: string;
-  phone: string;
-  email?: string;
-  created_at: string;
+  phone: string | null;
+  birth_date: string | null;
+  created_at: string | null;
 }
 
+// Venda com dados do cliente
 export interface SaleWithCustomer extends Sale {
-  customer: Customer;
+  customer: Customer | null;
 }
 
+// Estatísticas do dashboard
 export interface DashboardStats {
   salesToday: number;
   salesTodayCount: number;
@@ -40,3 +38,23 @@ export interface DashboardStats {
   cashbackYesterday: number;
   recentSales: SaleWithCustomer[];
 }
+
+// Dados para criar uma nova venda
+export interface CreateSaleData {
+  user_id: string;
+  total_amount: number;
+  cashback_redeemed: number;
+  net_amount_paid: number;
+  cashback_earned: number;
+}
+
+// Filtros para buscar vendas
+export interface SalesFilters {
+  search?: string;
+  type?: 'all' | 'with_cashback' | 'without_cashback';
+  period?: 'day' | 'week' | 'month' | 'all';
+  sortBy?: 'recent' | 'oldest' | 'highest' | 'lowest';
+}
+
+// Aliases para compatibilidade com código existente
+export type { Customer as CustomerBase };

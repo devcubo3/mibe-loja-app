@@ -1,118 +1,29 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import type { CustomerWithBalance } from '@/types/customer';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from './useAuth';
+import type { CustomerWithBalance, CustomersFilters } from '@/types/customer';
 
-// Mock customers data
-const MOCK_CUSTOMERS: CustomerWithBalance[] = [
-  {
-    id: '1',
-    name: 'João Silva',
-    cpf: '123.456.789-00',
-    birth_date: '1990-05-15',
-    email: 'joao.silva@email.com',
-    phone: '(11) 98765-4321',
-    created_at: new Date().toISOString(),
-    storeBalance: {
-      customer_id: '1',
-      store_id: 'store-1',
-      balance: 125.00,
-      total_purchases: 5,
-      total_spent: 1250.00,
-      total_cashback: 125.00,
-      last_purchase: new Date().toISOString(),
-    },
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    cpf: '987.654.321-00',
-    birth_date: '1985-08-22',
-    email: 'maria.santos@email.com',
-    phone: '(11) 97654-3210',
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    storeBalance: {
-      customer_id: '2',
-      store_id: 'store-1',
-      balance: 85.05,
-      total_purchases: 3,
-      total_spent: 850.50,
-      total_cashback: 85.05,
-      last_purchase: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    },
-  },
-  {
-    id: '3',
-    name: 'Pedro Oliveira',
-    cpf: '456.789.123-00',
-    birth_date: '1992-12-10',
-    email: 'pedro.oliveira@email.com',
-    phone: '(11) 96543-2109',
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    storeBalance: {
-      customer_id: '3',
-      store_id: 'store-1',
-      balance: 45.00,
-      total_purchases: 2,
-      total_spent: 450.00,
-      total_cashback: 45.00,
-      last_purchase: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    },
-  },
-  {
-    id: '4',
-    name: 'Ana Costa',
-    cpf: '321.654.987-00',
-    birth_date: '1988-03-25',
-    email: 'ana.costa@email.com',
-    phone: '(11) 95432-1098',
-    created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    storeBalance: {
-      customer_id: '4',
-      store_id: 'store-1',
-      balance: 75.50,
-      total_purchases: 4,
-      total_spent: 755.00,
-      total_cashback: 75.50,
-      last_purchase: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    },
-  },
-  {
-    id: '5',
-    name: 'Carlos Mendes',
-    cpf: '789.123.456-00',
-    birth_date: '1995-07-18',
-    email: 'carlos.mendes@email.com',
-    phone: '(11) 94321-0987',
-    created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    storeBalance: {
-      customer_id: '5',
-      store_id: 'store-1',
-      balance: 30.00,
-      total_purchases: 1,
-      total_spent: 300.00,
-      total_cashback: 30.00,
-      last_purchase: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-  },
-];
-
-type SortOption = 'recent' | 'oldest' | 'most_purchases' | 'highest_balance';
+type SortOption = CustomersFilters['sortBy'];
 
 export function useCustomers() {
+  const { company } = useAuth();
   const [customers, setCustomers] = useState<CustomerWithBalance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchCustomers = useCallback(
-    async (options?: { 
-      search?: string;
-      sortBy?: SortOption;
-      page?: number;
-      append?: boolean;
-    }) => {
+    async (options?: CustomersFilters & { page?: number; append?: boolean }) => {
+      if (!company?.id) {
+        setIsLoading(false);
+        return;
+      }
+
       const { search = '', sortBy = 'recent', page = 0, append = false } = options || {};
+      const pageSize = 20;
 
       if (page === 0) {
         setIsLoading(true);
@@ -120,82 +31,303 @@ export function useCustomers() {
         setIsLoadingMore(true);
       }
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
       try {
-        let filteredCustomers = [...MOCK_CUSTOMERS];
+        // Buscar saldos de cashback da empresa com dados do cliente
+        let query = supabase
+          .from('cashback_balances')
+          .select(`
+            id,
+            user_id,
+            company_id,
+            current_balance,
+            last_purchase_date,
+            profiles:user_id (
+              id,
+              full_name,
+              cpf,
+              phone,
+              birth_date,
+              created_at
+            )
+          `, { count: 'exact' })
+          .eq('company_id', company.id);
 
-        // Apply search filter
+        // Ordenação
+        switch (sortBy) {
+          case 'recent':
+            query = query.order('last_purchase_date', { ascending: false, nullsFirst: false });
+            break;
+          case 'oldest':
+            query = query.order('last_purchase_date', { ascending: true, nullsFirst: true });
+            break;
+          case 'highest_balance':
+            query = query.order('current_balance', { ascending: false });
+            break;
+          default:
+            query = query.order('last_purchase_date', { ascending: false, nullsFirst: false });
+        }
+
+        // Paginação
+        query = query.range(page * pageSize, (page + 1) * pageSize - 1);
+
+        const { data, error: queryError, count } = await query;
+
+        if (queryError) throw queryError;
+
+        // Buscar estatísticas de transações para cada cliente
+        const customerIds = data?.map((b: any) => b.user_id).filter(Boolean) || [];
+
+        let transactionStats: Record<string, { total_purchases: number; total_spent: number; total_cashback: number }> = {};
+
+        if (customerIds.length > 0) {
+          const { data: transactions } = await supabase
+            .from('transactions')
+            .select('user_id, total_amount, cashback_earned')
+            .eq('company_id', company.id)
+            .in('user_id', customerIds);
+
+          // Agregar estatísticas por cliente
+          transactions?.forEach((t) => {
+            if (!t.user_id) return;
+            if (!transactionStats[t.user_id]) {
+              transactionStats[t.user_id] = { total_purchases: 0, total_spent: 0, total_cashback: 0 };
+            }
+            transactionStats[t.user_id].total_purchases += 1;
+            transactionStats[t.user_id].total_spent += t.total_amount || 0;
+            transactionStats[t.user_id].total_cashback += t.cashback_earned || 0;
+          });
+        }
+
+        // Formatar clientes
+        let formattedCustomers: CustomerWithBalance[] = (data || [])
+          .filter((b: any) => b.profiles)
+          .map((b: any) => ({
+            id: b.profiles.id,
+            full_name: b.profiles.full_name,
+            cpf: b.profiles.cpf,
+            phone: b.profiles.phone,
+            birth_date: b.profiles.birth_date,
+            created_at: b.profiles.created_at,
+            storeBalance: {
+              customer_id: b.user_id,
+              company_id: b.company_id,
+              balance: b.current_balance || 0,
+              last_purchase_date: b.last_purchase_date,
+              total_purchases: transactionStats[b.user_id]?.total_purchases || 0,
+              total_spent: transactionStats[b.user_id]?.total_spent || 0,
+              total_cashback: transactionStats[b.user_id]?.total_cashback || 0,
+            },
+          }));
+
+        // Filtro de busca (client-side)
         if (search) {
-          const searchLower = search.toLowerCase();
-          filteredCustomers = filteredCustomers.filter(
+          const searchLower = search.toLowerCase().replace(/[.-]/g, '');
+          formattedCustomers = formattedCustomers.filter(
             customer =>
-              customer.name.toLowerCase().includes(searchLower) ||
-              customer.cpf.includes(search) ||
-              customer.email?.toLowerCase().includes(searchLower) ||
-              customer.phone?.includes(search)
+              customer.full_name.toLowerCase().includes(searchLower) ||
+              customer.cpf.replace(/[.-]/g, '').includes(searchLower) ||
+              customer.phone?.replace(/[()-\s]/g, '').includes(searchLower)
           );
         }
 
-        // Apply sorting
-        switch (sortBy) {
-          case 'recent':
-            filteredCustomers.sort((a, b) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            );
-            break;
-          case 'oldest':
-            filteredCustomers.sort((a, b) => 
-              new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-            );
-            break;
-          case 'most_purchases':
-            filteredCustomers.sort((a, b) => 
-              b.storeBalance.total_purchases - a.storeBalance.total_purchases
-            );
-            break;
-          case 'highest_balance':
-            filteredCustomers.sort((a, b) => 
-              b.storeBalance.balance - a.storeBalance.balance
-            );
-            break;
+        // Ordenação adicional por compras/nome (client-side)
+        if (sortBy === 'most_purchases') {
+          formattedCustomers.sort((a, b) =>
+            (b.storeBalance.total_purchases || 0) - (a.storeBalance.total_purchases || 0)
+          );
+        } else if (sortBy === 'name_asc') {
+          formattedCustomers.sort((a, b) => a.full_name.localeCompare(b.full_name));
+        } else if (sortBy === 'name_desc') {
+          formattedCustomers.sort((a, b) => b.full_name.localeCompare(a.full_name));
         }
 
-        setTotalCount(filteredCustomers.length);
-        
+        setTotalCount(count || formattedCustomers.length);
+
         if (append) {
-          setCustomers(prev => [...prev, ...filteredCustomers.slice(page * 20, (page + 1) * 20)]);
+          setCustomers(prev => [...prev, ...formattedCustomers]);
         } else {
-          setCustomers(filteredCustomers.slice(0, 20));
+          setCustomers(formattedCustomers);
         }
-      } catch (error) {
-        console.error('Erro ao buscar clientes:', error);
+      } catch (err) {
+        console.error('Erro ao buscar clientes:', err);
+        setError('Erro ao buscar clientes');
       } finally {
         setIsLoading(false);
         setIsLoadingMore(false);
       }
     },
-    []
+    [company?.id]
   );
 
-  const getCustomerById = useCallback(async (id: string) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    return MOCK_CUSTOMERS.find(customer => customer.id === id) || null;
-  }, []);
+  const getCustomerById = useCallback(async (id: string): Promise<CustomerWithBalance | null> => {
+    if (!company?.id) return null;
+
+    try {
+      // Buscar saldo do cliente
+      const { data: balance, error: balanceError } = await supabase
+        .from('cashback_balances')
+        .select(`
+          id,
+          user_id,
+          company_id,
+          current_balance,
+          last_purchase_date,
+          profiles:user_id (
+            id,
+            full_name,
+            cpf,
+            phone,
+            birth_date,
+            created_at
+          )
+        `)
+        .eq('company_id', company.id)
+        .eq('user_id', id)
+        .single();
+
+      if (balanceError || !balance || !(balance as any).profiles) {
+        // Cliente pode não ter saldo ainda, buscar só o profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, cpf, phone, birth_date, created_at')
+          .eq('id', id)
+          .single();
+
+        if (profileError || !profile) return null;
+
+        return {
+          id: profile.id,
+          full_name: profile.full_name,
+          cpf: profile.cpf,
+          phone: profile.phone,
+          birth_date: profile.birth_date,
+          created_at: profile.created_at,
+          storeBalance: {
+            customer_id: profile.id,
+            company_id: company.id,
+            balance: 0,
+            last_purchase_date: null,
+            total_purchases: 0,
+            total_spent: 0,
+            total_cashback: 0,
+          },
+        };
+      }
+
+      // Buscar estatísticas de transações
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('total_amount, cashback_earned')
+        .eq('company_id', company.id)
+        .eq('user_id', id);
+
+      const stats = transactions?.reduce(
+        (acc, t) => ({
+          total_purchases: acc.total_purchases + 1,
+          total_spent: acc.total_spent + (t.total_amount || 0),
+          total_cashback: acc.total_cashback + (t.cashback_earned || 0),
+        }),
+        { total_purchases: 0, total_spent: 0, total_cashback: 0 }
+      ) || { total_purchases: 0, total_spent: 0, total_cashback: 0 };
+
+      const profile = (balance as any).profiles;
+
+      return {
+        id: profile.id,
+        full_name: profile.full_name,
+        cpf: profile.cpf,
+        phone: profile.phone,
+        birth_date: profile.birth_date,
+        created_at: profile.created_at,
+        storeBalance: {
+          customer_id: balance.user_id!,
+          company_id: balance.company_id!,
+          balance: balance.current_balance || 0,
+          last_purchase_date: balance.last_purchase_date,
+          ...stats,
+        },
+      };
+    } catch (err) {
+      console.error('Erro ao buscar cliente:', err);
+      return null;
+    }
+  }, [company?.id]);
+
+  const findCustomerByCpf = useCallback(async (cpf: string): Promise<CustomerWithBalance | null> => {
+    if (!company?.id) return null;
+
+    try {
+      // Limpar CPF (remover pontos e traços)
+      const cleanCpf = cpf.replace(/[.-]/g, '');
+
+      // Buscar profile pelo CPF
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, cpf, phone, birth_date, created_at')
+        .eq('cpf', cleanCpf)
+        .single();
+
+      if (profileError || !profile) return null;
+
+      // Buscar saldo do cliente nesta empresa
+      const { data: balance } = await supabase
+        .from('cashback_balances')
+        .select('current_balance, last_purchase_date')
+        .eq('company_id', company.id)
+        .eq('user_id', profile.id)
+        .single();
+
+      // Buscar estatísticas de transações
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('total_amount, cashback_earned')
+        .eq('company_id', company.id)
+        .eq('user_id', profile.id);
+
+      const stats = transactions?.reduce(
+        (acc, t) => ({
+          total_purchases: acc.total_purchases + 1,
+          total_spent: acc.total_spent + (t.total_amount || 0),
+          total_cashback: acc.total_cashback + (t.cashback_earned || 0),
+        }),
+        { total_purchases: 0, total_spent: 0, total_cashback: 0 }
+      ) || { total_purchases: 0, total_spent: 0, total_cashback: 0 };
+
+      return {
+        id: profile.id,
+        full_name: profile.full_name,
+        cpf: profile.cpf,
+        phone: profile.phone,
+        birth_date: profile.birth_date,
+        created_at: profile.created_at,
+        storeBalance: {
+          customer_id: profile.id,
+          company_id: company.id,
+          balance: balance?.current_balance || 0,
+          last_purchase_date: balance?.last_purchase_date || null,
+          ...stats,
+        },
+      };
+    } catch (err) {
+      console.error('Erro ao buscar cliente por CPF:', err);
+      return null;
+    }
+  }, [company?.id]);
 
   useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+    if (company?.id) {
+      fetchCustomers();
+    }
+  }, [company?.id, fetchCustomers]);
 
   return {
     customers,
     isLoading,
     isLoadingMore,
     totalCount,
+    error,
     fetchCustomers,
     getCustomerById,
+    findCustomerByCpf,
   };
 }

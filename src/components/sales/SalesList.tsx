@@ -3,10 +3,10 @@
 import { SaleCard } from './SaleCard';
 import { EmptyState, SkeletonCard, Button } from '@/components/ui';
 import { Receipt } from 'lucide-react';
-import type { Sale } from '@/types/sale';
+import type { SaleWithCustomer } from '@/types/sale';
 
 interface SalesListProps {
-  sales: Sale[];
+  sales: SaleWithCustomer[];
   isLoading?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;

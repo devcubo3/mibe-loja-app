@@ -42,10 +42,10 @@ export function CustomerPreview({
       <Card variant="default" padding="lg">
         {/* Header with Avatar */}
         <div className="bg-primary -mx-lg -mt-lg px-lg py-lg mb-lg rounded-t-md flex items-center gap-md">
-          <Avatar name={customer.name} size="lg" />
+          <Avatar name={customer.full_name} size="lg" />
           <div>
             <p className="text-body-lg font-semibold text-white">
-              {customer.name}
+              {customer.full_name}
             </p>
             <Badge variant="light">{formatCPF(customer.cpf)}</Badge>
           </div>
@@ -53,7 +53,7 @@ export function CustomerPreview({
 
         {/* Info Fields */}
         <div className="space-y-md">
-          <InfoField label="Nome completo" value={customer.name} />
+          <InfoField label="Nome completo" value={customer.full_name} />
           <InfoField label="CPF" value={formatCPF(customer.cpf)} />
           {customer.birth_date && (
             <InfoField

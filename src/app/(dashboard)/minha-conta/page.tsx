@@ -20,19 +20,12 @@ import {
   ChangePasswordModal,
   LogoutConfirmModal,
 } from '@/components/minha-conta';
-import {
-  formatCPF,
-  formatPhone,
-  formatBirthDate,
-  formatBirthDateInput,
-} from '@/lib/formatters';
+// Note: CompanyUser only has name and email editable fields
 
 const SUPPORT_WHATSAPP = '5511999999999';
 
 const schema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100, 'Nome deve ter no máximo 100 caracteres'),
-  phone: z.string().min(14, 'Telefone inválido'),
-  birth_date: z.string().min(10, 'Data inválida'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -50,14 +43,11 @@ export default function MinhaContaPage() {
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
     reset,
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: user?.name || '',
-      phone: formatPhone(user?.phone || ''),
-      birth_date: formatBirthDate(user?.birth_date || ''),
     },
   });
 
@@ -85,8 +75,6 @@ export default function MinhaContaPage() {
   const handleCancel = () => {
     reset({
       name: user.name,
-      phone: formatPhone(user.phone || ''),
-      birth_date: formatBirthDate(user.birth_date || ''),
     });
     setIsEditing(false);
   };
@@ -122,7 +110,7 @@ export default function MinhaContaPage() {
 
       {/* Profile Photo */}
       <ProfilePhotoUpload
-        currentPhoto={user.photo_url}
+        currentPhoto={undefined}
         userName={user.name}
         onUpload={handlePhotoUpload}
         isEditing={isEditing}
@@ -157,45 +145,6 @@ export default function MinhaContaPage() {
                 </p>
               </div>
 
-              {/* CPF (bloqueado) */}
-              <div>
-                <label className="block text-body font-medium text-text-primary mb-xs">
-                  CPF
-                </label>
-                <div className="flex items-center justify-between bg-input-bg px-md py-sm rounded border border-input-border opacity-60">
-                  <span className="text-body text-text-secondary">
-                    {formatCPF(user.cpf)}
-                  </span>
-                  <Lock className="w-4 h-4 text-text-muted" />
-                </div>
-                <p className="text-caption text-text-muted mt-xs">
-                  O CPF não pode ser alterado
-                </p>
-              </div>
-
-              {/* Telefone (editável) */}
-              <Input
-                label="Telefone"
-                error={errors.phone?.message}
-                {...register('phone', {
-                  onChange: (e) => {
-                    setValue('phone', formatPhone(e.target.value));
-                  },
-                })}
-              />
-
-              {/* Data de Nascimento (editável) */}
-              <Input
-                label="Data de Nascimento"
-                placeholder="DD/MM/AAAA"
-                error={errors.birth_date?.message}
-                {...register('birth_date', {
-                  onChange: (e) => {
-                    setValue('birth_date', formatBirthDateInput(e.target.value));
-                  },
-                })}
-              />
-
               {/* Botões de ação */}
               <div className="flex gap-sm pt-md">
                 <Button
@@ -216,15 +165,6 @@ export default function MinhaContaPage() {
             <div className="space-y-md">
               <InfoField label="Nome completo" value={user.name} />
               <InfoField label="E-mail" value={user.email} locked />
-              <InfoField label="CPF" value={formatCPF(user.cpf)} locked />
-              <InfoField
-                label="Telefone"
-                value={formatPhone(user.phone || '')}
-              />
-              <InfoField
-                label="Data de Nascimento"
-                value={formatBirthDate(user.birth_date || '') || '-'}
-              />
             </div>
           )}
         </Card>
@@ -331,7 +271,7 @@ function InfoField({
       </div>
       {locked && (
         <p className="text-caption text-text-muted mt-xs">
-          {label === 'E-mail' ? 'O e-mail não pode ser alterado' : 'O CPF não pode ser alterado'}
+          Este campo não pode ser alterado
         </p>
       )}
     </div>

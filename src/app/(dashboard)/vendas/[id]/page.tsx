@@ -5,72 +5,43 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { SaleDetail } from '@/components/sales/SaleDetail';
 import { Skeleton } from '@/components/ui';
-import type { Sale } from '@/types/sale';
+import { useSales } from '@/hooks/useSales';
+import type { SaleWithCustomer } from '@/types/sale';
 import Link from 'next/link';
-
-// Dados mockados
-const MOCK_SALES: Record<string, Sale> = {
-  'sale-1': {
-    id: 'sale-1',
-    store_id: 'mock-store-123',
-    customer_id: 'cust-1',
-    customer_name: 'João Silva',
-    customer_cpf: '12345678901',
-    amount: 150,
-    purchase_amount: 150,
-    balance_used: 0,
-    amount_paid: 150,
-    cashback_amount: 15,
-    cashback_generated: 15,
-    cashback_percentage: 10,
-    status: 'confirmed',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  'sale-2': {
-    id: 'sale-2',
-    store_id: 'mock-store-123',
-    customer_id: 'cust-2',
-    customer_name: 'Maria Santos',
-    customer_cpf: '98765432101',
-    amount: 200,
-    purchase_amount: 200,
-    balance_used: 20,
-    amount_paid: 180,
-    cashback_amount: 20,
-    cashback_generated: 20,
-    cashback_percentage: 10,
-    status: 'confirmed',
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-};
 
 export default function SaleDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [sale, setSale] = useState<Sale | null>(null);
+  const { fetchSaleById } = useSales();
+  const [sale, setSale] = useState<SaleWithCustomer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSale = () => {
+    const loadSale = async () => {
       if (!params.id) return;
 
+      setIsLoading(true);
       const id = params.id as string;
-      const mockSale = MOCK_SALES[id];
 
-      if (!mockSale) {
-        setError('Venda não encontrada');
-      } else {
-        setSale(mockSale);
+      try {
+        const saleData = await fetchSaleById(id);
+
+        if (!saleData) {
+          setError('Venda não encontrada');
+        } else {
+          setSale(saleData);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar venda:', err);
+        setError('Erro ao carregar dados da venda');
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
-    fetchSale();
-  }, [params.id]);
+    loadSale();
+  }, [params.id, fetchSaleById]);
 
   return (
     <div className="page-container max-w-2xl mx-auto">
@@ -95,7 +66,7 @@ export default function SaleDetailPage() {
       )}
 
       {/* Error */}
-      {error && (
+      {error && !isLoading && (
         <div className="text-center py-xl">
           <p className="text-body text-error mb-md">{error}</p>
           <Link href="/vendas" className="text-primary hover:underline">
@@ -105,7 +76,7 @@ export default function SaleDetailPage() {
       )}
 
       {/* Sale Detail */}
-      {sale && <SaleDetail sale={sale} />}
+      {sale && !isLoading && <SaleDetail sale={sale} />}
     </div>
   );
 }

@@ -1,60 +1,25 @@
-﻿'use client';
+'use client';
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, Store, AuthState, LoginCredentials, AuthError } from '@/types/auth';
-
-// Dados mockados para desenvolvimento
-const MOCK_USER: User = {
-  id: 'mock-user-123',
-  name: 'João Silva Santos',
-  email: 'joao.silva@email.com',
-  cpf: '12345678900',
-  phone: '11987654321',
-  birth_date: '1990-03-15',
-  photo_url: undefined,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
-
-const MOCK_STORE: Store = {
-  id: 'mock-store-123',
-  user_id: 'mock-user-123',
-  name: 'Restaurante Sabor & Arte',
-  cnpj: '12345678000199',
-  email: 'contato@saborarte.com',
-  phone: '1134567890',
-  whatsapp: '11987654321',
-  address: 'Rua das Flores, 123 - Centro, São Paulo - SP',
-  logo_url: undefined,
-  cover_image: undefined,
-  category: 'Alimentação',
-  description: 'Restaurante especializado em culinária brasileira contemporânea. Ambiente aconchegante e atendimento de primeira qualidade.',
-  photos: [],
-  cashback_percentage: 5,
-  has_expiration: true,
-  expiration_days: 90,
-  has_min_purchase: true,
-  min_purchase: 20,
-  rating: 4.8,
-  total_reviews: 127,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
+import type { CompanyUser, CompanyData, AuthState, LoginCredentials, AuthError, LoginResponse } from '@/types/auth';
 
 interface AuthStore extends AuthState {
   login: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: AuthError }>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
-  loadStore: () => Promise<void>;
+  loadCompany: () => Promise<void>;
   setLoading: (loading: boolean) => void;
+  updateCompany: (data: Partial<CompanyData>) => void;
+  updateUser: (data: Partial<CompanyUser>) => void;
 }
 
 export const useAuth = create<AuthStore>()(
   persist(
     (set, get) => ({
       user: null,
-      store: null,
+      company: null,
+      token: null,
       isLoading: false,
       isAuthenticated: false,
 
@@ -63,22 +28,50 @@ export const useAuth = create<AuthStore>()(
       login: async (credentials) => {
         set({ isLoading: true });
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(credentials),
+          });
 
-        set({
-          user: MOCK_USER,
-          store: MOCK_STORE,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+          const data = await response.json();
 
-        return { success: true };
+          if (!response.ok) {
+            set({ isLoading: false });
+            return {
+              success: false,
+              error: { message: data.error || 'Erro ao fazer login' },
+            };
+          }
+
+          const loginData = data as LoginResponse;
+
+          set({
+            user: loginData.user,
+            company: loginData.company,
+            token: loginData.token,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+
+          return { success: true };
+        } catch (error) {
+          set({ isLoading: false });
+          return {
+            success: false,
+            error: { message: 'Erro de conexão. Tente novamente.' },
+          };
+        }
       },
 
       logout: async () => {
         set({
           user: null,
-          store: null,
+          company: null,
+          token: null,
           isAuthenticated: false,
           isLoading: false,
         });
@@ -86,20 +79,88 @@ export const useAuth = create<AuthStore>()(
 
       loadUser: async () => {
         const currentState = get();
-        if (!currentState.isAuthenticated) {
+        if (!currentState.isAuthenticated || !currentState.token) {
           set({ isLoading: false });
+          return;
+        }
+
+        // Verificar se o token ainda é válido
+        try {
+          const tokenData = JSON.parse(atob(currentState.token));
+          if (tokenData.exp < Date.now()) {
+            // Token expirado
+            set({
+              user: null,
+              company: null,
+              token: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          }
+        } catch {
+          // Token inválido
+          set({
+            user: null,
+            company: null,
+            token: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
         }
       },
 
-      loadStore: async () => {
+      loadCompany: async () => {
         const currentState = get();
-        if (currentState.isAuthenticated && !currentState.store) {
-          set({ store: MOCK_STORE });
+        if (!currentState.isAuthenticated || !currentState.token) return;
+
+        try {
+          const response = await fetch('/api/company/me', {
+            headers: {
+              'Authorization': `Bearer ${currentState.token}`
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            set({ company: data.company });
+          }
+        } catch (error) {
+          console.error('Erro ao carregar empresa:', error);
+        }
+      },
+
+      updateCompany: (data) => {
+        const currentState = get();
+        if (currentState.company) {
+          set({
+            company: { ...currentState.company, ...data },
+          });
+        }
+      },
+
+      updateUser: (data) => {
+        const currentState = get();
+        if (currentState.user) {
+          set({
+            user: { ...currentState.user, ...data },
+          });
         }
       },
     }),
     {
-      name: 'auth-storage',
+      name: 'mibe-auth-storage',
+      partialize: (state) => ({
+        user: state.user,
+        company: state.company,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );
+
+// Alias para manter compatibilidade com código existente
+export const useStore = () => {
+  const { company } = useAuth();
+  return company;
+};

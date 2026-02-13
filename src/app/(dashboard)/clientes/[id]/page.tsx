@@ -3,97 +3,67 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useSales } from '@/hooks/useSales';
 import { CustomerDetail } from '@/components/customers/CustomerDetail';
 import { Skeleton } from '@/components/ui';
 import type { CustomerWithBalance } from '@/types/customer';
-import type { Sale } from '@/types/sale';
-
-// Dados mockados
-const MOCK_CUSTOMERS: Record<string, CustomerWithBalance> = {
-  'cust-1': {
-    id: 'cust-1',
-    name: 'João Silva',
-    cpf: '12345678901',
-    email: 'joao@email.com',
-    phone: '11999999999',
-    created_at: new Date().toISOString(),
-    storeBalance: {
-      customer_id: 'cust-1',
-      store_id: 'mock-store-123',
-      balance: 125.50,
-      total_purchases: 12,
-      total_spent: 2500,
-      total_cashback: 250,
-    },
-  },
-  'cust-2': {
-    id: 'cust-2',
-    name: 'Maria Santos',
-    cpf: '98765432101',
-    email: 'maria@email.com',
-    phone: '11988888888',
-    created_at: new Date().toISOString(),
-    storeBalance: {
-      customer_id: 'cust-2',
-      store_id: 'mock-store-123',
-      balance: 75.00,
-      total_purchases: 5,
-      total_spent: 750,
-      total_cashback: 75,
-    },
-  },
-};
-
-const MOCK_SALES: Sale[] = [
-  {
-    id: 'sale-1',
-    store_id: 'mock-store-123',
-    customer_id: 'cust-1',
-    customer_name: 'João Silva',
-    customer_cpf: '12345678901',
-    amount: 150,
-    purchase_amount: 150,
-    balance_used: 0,
-    amount_paid: 150,
-    cashback_amount: 15,
-    cashback_generated: 15,
-    cashback_percentage: 10,
-    status: 'confirmed',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
+import type { SaleWithCustomer } from '@/types/sale';
 
 export default function CustomerDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { store } = useAuth();
+  const { getCustomerById } = useCustomers();
+  const { fetchSales, sales } = useSales();
   const [customer, setCustomer] = useState<CustomerWithBalance | null>(null);
-  const [recentSales, setRecentSales] = useState<Sale[]>([]);
+  const [recentSales, setRecentSales] = useState<SaleWithCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCustomer = () => {
+    const loadCustomer = async () => {
       if (!params.id) return;
 
+      setIsLoading(true);
       const id = params.id as string;
-      const mockCustomer = MOCK_CUSTOMERS[id];
 
-      if (!mockCustomer) {
-        setError('Cliente não encontrado');
+      try {
+        const customerData = await getCustomerById(id);
+
+        if (!customerData) {
+          setError('Cliente não encontrado');
+          setIsLoading(false);
+          return;
+        }
+
+        setCustomer(customerData);
+      } catch (err) {
+        console.error('Erro ao carregar cliente:', err);
+        setError('Erro ao carregar dados do cliente');
+      } finally {
         setIsLoading(false);
-        return;
       }
-
-      setCustomer(mockCustomer);
-      setRecentSales(MOCK_SALES.filter(s => s.customer_id === id));
-      setIsLoading(false);
     };
 
-    fetchCustomer();
-  }, [params.id]);
+    loadCustomer();
+  }, [params.id, getCustomerById]);
+
+  // Buscar vendas do cliente quando tiver dados
+  useEffect(() => {
+    if (customer) {
+      fetchSales({ period: 'all' });
+    }
+  }, [customer, fetchSales]);
+
+  // Filtrar vendas do cliente específico
+  useEffect(() => {
+    if (customer && sales.length > 0) {
+      const customerSales = sales
+        .filter(sale => sale.user_id === customer.id)
+        .slice(0, 5);
+      setRecentSales(customerSales);
+    }
+  }, [customer, sales]);
 
   return (
     <div className="page-container max-w-2xl mx-auto">
@@ -118,7 +88,7 @@ export default function CustomerDetailPage() {
       )}
 
       {/* Error */}
-      {error && (
+      {error && !isLoading && (
         <div className="text-center py-xl">
           <p className="text-body text-error mb-md">{error}</p>
           <button
@@ -131,7 +101,7 @@ export default function CustomerDetailPage() {
       )}
 
       {/* Customer Detail */}
-      {customer && (
+      {customer && !isLoading && (
         <CustomerDetail customer={customer} recentSales={recentSales} />
       )}
     </div>

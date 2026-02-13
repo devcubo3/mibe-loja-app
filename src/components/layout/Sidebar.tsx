@@ -8,6 +8,7 @@ import {
   Receipt,
   Users,
   Building2,
+  CreditCard,
   Bell,
   User,
   LogOut,
@@ -51,6 +52,11 @@ const menuItems = [
     label: 'Empresa',
     href: '/empresa',
     icon: Building2,
+  },
+  {
+    label: 'Planos',
+    href: '/planos',
+    icon: CreditCard,
   },
   {
     label: 'Notificações',

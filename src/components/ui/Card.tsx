@@ -40,7 +40,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
           'rounded-md',
           variants[variant],
           paddings[padding],
-          hoverable && 'cursor-pointer hover:shadow-md transition-shadow duration-200',
+          hoverable && 'cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300',
           className
         )}
         {...props}

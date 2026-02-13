@@ -9,10 +9,10 @@ import {
   formatDate,
   formatTime,
 } from '@/lib/formatters';
-import type { Sale } from '@/types/sale';
+import type { SaleWithCustomer } from '@/types/sale';
 
 interface SaleCardProps {
-  sale: Sale;
+  sale: SaleWithCustomer;
 }
 
 export function SaleCard({ sale }: SaleCardProps) {
@@ -27,22 +27,22 @@ export function SaleCard({ sale }: SaleCardProps) {
         {/* Header */}
         <div className="flex items-start justify-between mb-md">
           <div className="flex items-center gap-md">
-            <Avatar name={sale.customer_name || 'Cliente'} size="md" />
+            <Avatar name={sale.customer?.full_name || 'Cliente'} size="md" />
             <div>
               <p className="font-semibold text-text-primary">
-                {sale.customer_name || 'Cliente'}
+                {sale.customer?.full_name || 'Cliente'}
               </p>
               <p className="text-caption text-text-secondary">
-                CPF: {formatCPF(sale.customer_cpf || '')}
+                CPF: {formatCPF(sale.customer?.cpf || '')}
               </p>
             </div>
           </div>
           <div className="text-right">
             <p className="text-body text-text-secondary">
-              {formatDate(sale.created_at)}
+              {sale.created_at ? formatDate(sale.created_at) : '-'}
             </p>
             <p className="text-caption text-text-muted">
-              {formatTime(sale.created_at)}
+              {sale.created_at ? formatTime(sale.created_at) : '-'}
             </p>
           </div>
         </div>
@@ -56,26 +56,26 @@ export function SaleCard({ sale }: SaleCardProps) {
             <div className="flex items-center gap-lg">
               <span className="text-body text-text-secondary">Valor:</span>
               <span className="font-semibold">
-                {formatCurrency(sale.purchase_amount || 0)}
+                {formatCurrency(sale.total_amount || 0)}
               </span>
             </div>
 
-            {sale.balance_used && sale.balance_used > 0 && (
+            {sale.cashback_redeemed > 0 && (
               <div className="flex items-center gap-sm text-caption">
                 <span className="text-text-muted">Saldo usado:</span>
                 <span className="text-error">
-                  -{formatCurrency(sale.balance_used)}
+                  -{formatCurrency(sale.cashback_redeemed)}
                 </span>
                 <span className="text-text-muted mx-1">•</span>
                 <span className="text-text-muted">Pago:</span>
-                <span>{formatCurrency(sale.amount_paid || 0)}</span>
+                <span>{formatCurrency(sale.net_amount_paid || 0)}</span>
               </div>
             )}
 
             <div className="flex items-center gap-sm">
               <span className="text-body text-text-secondary">Cashback:</span>
               <Badge variant="success">
-                +{formatCurrency(sale.cashback_generated || 0)}
+                +{formatCurrency(sale.cashback_earned || 0)}
               </Badge>
             </div>
           </div>

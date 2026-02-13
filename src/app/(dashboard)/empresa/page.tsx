@@ -17,8 +17,9 @@ import {
   StarRating,
   EditStoreModal,
 } from '@/components/empresa';
-import { formatCNPJ, formatPhone, formatCurrency } from '@/lib/formatters';
+import { formatCNPJ, formatCurrency } from '@/lib/formatters';
 import type { StoreUpdateData, Review } from '@/types/store';
+import { storeService } from '@/services/storeService';
 
 // Dados mock de avaliações para demonstração
 const MOCK_REVIEWS: Review[] = [
@@ -59,12 +60,12 @@ const MOCK_REVIEWS: Review[] = [
 
 export default function EmpresaPage() {
   const router = useRouter();
-  const { store, loadStore } = useAuth();
+  const { company, loadCompany } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [photos, setPhotos] = useState<string[]>(store?.photos || []);
+  const [photos, setPhotos] = useState<string[]>(company?.photos || []);
   const [reviews] = useState<Review[]>(MOCK_REVIEWS);
 
-  if (!store) {
+  if (!company) {
     return (
       <div className="page-container">
         <p>Carregando...</p>
@@ -72,17 +73,40 @@ export default function EmpresaPage() {
     );
   }
 
-  const handleCoverUpload = (url: string) => {
-    console.log('Capa atualizada:', url);
+  const handleCoverUpload = async (url: string, file?: File) => {
+    if (!file) return;
+    try {
+      await storeService.uploadAsset(file, 'cover');
+      await loadCompany();
+      // toast.success('Capa atualizada!');
+    } catch (error) {
+      console.error('Erro ao subir capa:', error);
+      // toast.error('Falha ao subir capa');
+    }
   };
 
-  const handleLogoUpload = (url: string) => {
-    console.log('Logo atualizado:', url);
+  const handleLogoUpload = async (url: string, file?: File) => {
+    if (!file) return;
+    try {
+      await storeService.uploadAsset(file, 'logo');
+      await loadCompany();
+      // toast.success('Logo atualizado!');
+    } catch (error) {
+      console.error('Erro ao subir logo:', error);
+      // toast.error('Falha ao subir logo');
+    }
   };
 
   const handleSave = async (data: StoreUpdateData) => {
-    console.log('Dados salvos:', data);
-    await loadStore();
+    try {
+      await storeService.updateStore(data);
+      await loadCompany();
+      // toast.success('Dados salvos com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      // toast.error('Erro ao salvar alterações');
+      throw error;
+    }
   };
 
   const handleAddPhoto = (url: string) => {
@@ -104,8 +128,8 @@ export default function EmpresaPage() {
       <div className="relative">
         {/* Cover Image */}
         <CoverUpload
-          currentCover={store.cover_image}
-          storeId={store.id}
+          currentCover={company.cover_url || undefined}
+          storeId={company.id}
           onUpload={handleCoverUpload}
         />
 
@@ -113,9 +137,9 @@ export default function EmpresaPage() {
         <div className="absolute bottom-0 left-lg transform translate-y-1/2">
           <div className="relative bg-white p-1 rounded-lg shadow-lg">
             <LogoUpload
-              currentLogo={store.logo_url}
-              storeName={store.name}
-              storeId={store.id}
+              currentLogo={company.logo_url || undefined}
+              storeName={company.business_name}
+              storeId={company.id}
               onUpload={handleLogoUpload}
             />
           </div>
@@ -128,16 +152,16 @@ export default function EmpresaPage() {
         <div className="flex items-start justify-between mb-lg">
           <div>
             <h1 className="text-title font-bold text-text-primary">
-              {store.name}
+              {company.business_name}
             </h1>
             <div className="flex items-center gap-sm mt-xs">
-              <StarRating rating={store.rating || 4.8} size="md" showValue />
+              <StarRating rating={company.rating || 4.8} size="md" showValue />
               <span className="text-caption text-text-muted">
-                ({store.total_reviews || 127} avaliações)
+                ({company.total_reviews || 127} avaliações)
               </span>
             </div>
           </div>
-          <Badge variant="dark">{store.category || 'Alimentação'}</Badge>
+          <Badge variant="dark">{company.category || 'Alimentação'}</Badge>
         </div>
 
         {/* Informações da empresa */}
@@ -154,32 +178,24 @@ export default function EmpresaPage() {
           </div>
           <Card variant="default" padding="md">
             <div className="space-y-md">
-              <InfoField label="Nome fantasia" value={store.name} />
+              <InfoField label="Nome fantasia" value={company.business_name} />
               <InfoField
                 label="CNPJ"
-                value={formatCNPJ(store.cnpj)}
+                value={formatCNPJ(company.cnpj || '')}
                 locked
               />
               <InfoField
                 label="Categoria"
-                value={store.category || 'Alimentação'}
+                value={company.category || 'Alimentação'}
               />
               <InfoField
                 label="Descrição"
                 value={
-                  store.description ||
+                  company.description ||
                   'Adicione uma descrição para sua empresa...'
                 }
               />
-              <InfoField label="Endereço" value={store.address || '-'} />
-              <InfoField
-                label="Telefone"
-                value={formatPhone(store.phone || '')}
-              />
-              <InfoField
-                label="WhatsApp"
-                value={formatPhone(store.whatsapp || store.phone || '')}
-              />
+              <InfoField label="E-mail" value={company.email || '-'} />
             </div>
           </Card>
         </section>
@@ -205,12 +221,12 @@ export default function EmpresaPage() {
                 </p>
                 <div className="flex items-baseline gap-sm">
                   <span className="text-[32px] font-bold text-primary">
-                    {store.cashback_percentage}%
+                    {company.cashback_percent}%
                   </span>
                 </div>
                 <p className="text-caption text-text-muted mt-xs">
                   A cada R$ 1,00 gasto, o cliente recebe R${' '}
-                  {(store.cashback_percentage / 100).toFixed(2)} de volta
+                  {(company.cashback_percent / 100).toFixed(2)} de volta
                 </p>
               </div>
 
@@ -221,9 +237,9 @@ export default function EmpresaPage() {
                 <p className="text-caption text-text-muted mb-xs">
                   📅 Validade do saldo
                 </p>
-                {store.has_expiration ? (
+                {company.has_expiration ? (
                   <p className="text-body-lg font-semibold text-text-primary">
-                    {store.expiration_days} dias
+                    {company.expiration_days} dias
                   </p>
                 ) : (
                   <p className="text-body-lg font-semibold text-success">
@@ -239,9 +255,9 @@ export default function EmpresaPage() {
                 <p className="text-caption text-text-muted mb-xs">
                   🛒 Compra mínima para cashback
                 </p>
-                {store.has_min_purchase ? (
+                {company.min_purchase_value > 0 ? (
                   <p className="text-body-lg font-semibold text-text-primary">
-                    {formatCurrency(store.min_purchase || 0)}
+                    {formatCurrency(company.min_purchase_value)}
                   </p>
                 ) : (
                   <p className="text-body-lg font-semibold text-success">
@@ -266,7 +282,7 @@ export default function EmpresaPage() {
         <section className="mb-lg">
           <div className="flex items-center justify-between mb-md">
             <h2 className="section-title">
-              Avaliações ({store.total_reviews || reviews.length})
+              Avaliações ({company.total_reviews || reviews.length})
             </h2>
             <button className="flex items-center gap-1 text-primary hover:underline">
               <span className="text-sm font-medium">Ver todas</span>
@@ -294,7 +310,7 @@ export default function EmpresaPage() {
       <EditStoreModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        store={store}
+        store={company}
         onSave={handleSave}
       />
     </div>

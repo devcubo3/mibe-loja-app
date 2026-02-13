@@ -63,21 +63,21 @@ export function RecentSales({ sales, isLoading }: RecentSalesProps) {
               href={`/vendas/${sale.id}`}
               className="flex items-center gap-md p-sm -mx-sm rounded-sm hover:bg-surface-secondary transition-colors"
             >
-              <Avatar name={sale.customer.name} />
+              <Avatar name={sale.customer?.full_name || 'Cliente'} />
               <div className="flex-1 min-w-0">
                 <p className="text-body font-medium truncate">
-                  {sale.customer.name}
+                  {sale.customer?.full_name || 'Cliente'}
                 </p>
                 <p className="text-caption text-text-muted">
-                  {formatTime(sale.created_at)}
+                  {sale.created_at ? formatTime(sale.created_at) : '-'}
                 </p>
               </div>
               <div className="text-right flex-shrink-0">
                 <p className="text-body font-semibold">
-                  {formatCurrency(sale.amount)}
+                  {formatCurrency(sale.total_amount)}
                 </p>
                 <p className="text-caption text-success">
-                  +{formatCurrency(sale.cashback_amount)}
+                  +{formatCurrency(sale.cashback_earned)}
                 </p>
               </div>
             </Link>

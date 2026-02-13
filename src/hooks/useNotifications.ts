@@ -1,75 +1,161 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Notification } from '@/types/notification';
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import type { Notification, NotificationType } from '@/types/notification';
 
-// Dados mockados
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'notif-1',
-    store_id: 'mock-store-123',
-    type: 'sale',
-    title: 'Nova venda registrada',
-    message: 'João Silva realizou uma compra de R$ 1.250,00',
-    read: false,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'notif-2',
-    store_id: 'mock-store-123',
-    type: 'customer',
-    title: 'Novo cliente cadastrado',
-    message: 'Maria Santos se cadastrou na sua loja',
-    read: false,
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'notif-3',
-    store_id: 'mock-store-123',
-    type: 'info',
-    title: 'Cliente atingiu meta de pontos',
-    message: 'Pedro Oliveira acumulou 1.000 pontos!',
-    read: true,
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+interface NotificationsState {
+  notifications: Notification[];
+  unreadCount: number;
+  addNotification: (notification: Omit<Notification, 'id' | 'created_at' | 'read'>) => void;
+  markAsRead: (id: string) => void;
+  markAllAsRead: () => void;
+  clearAll: () => void;
+  removeNotification: (id: string) => void;
+}
+
+// Store persistente para notificações
+const useNotificationsStore = create<NotificationsState>()(
+  persist(
+    (set, get) => ({
+      notifications: [],
+      unreadCount: 0,
+
+      addNotification: (notification) => {
+        const newNotification: Notification = {
+          ...notification,
+          id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          read: false,
+          created_at: new Date().toISOString(),
+        };
+
+        set((state) => ({
+          notifications: [newNotification, ...state.notifications].slice(0, 50), // Manter máximo de 50
+          unreadCount: state.unreadCount + 1,
+        }));
+      },
+
+      markAsRead: (id) => {
+        set((state) => {
+          const notification = state.notifications.find((n) => n.id === id);
+          if (notification && !notification.read) {
+            return {
+              notifications: state.notifications.map((n) =>
+                n.id === id ? { ...n, read: true } : n
+              ),
+              unreadCount: Math.max(0, state.unreadCount - 1),
+            };
+          }
+          return state;
+        });
+      },
+
+      markAllAsRead: () => {
+        set((state) => ({
+          notifications: state.notifications.map((n) => ({ ...n, read: true })),
+          unreadCount: 0,
+        }));
+      },
+
+      clearAll: () => {
+        set({ notifications: [], unreadCount: 0 });
+      },
+
+      removeNotification: (id) => {
+        set((state) => {
+          const notification = state.notifications.find((n) => n.id === id);
+          return {
+            notifications: state.notifications.filter((n) => n.id !== id),
+            unreadCount: notification && !notification.read
+              ? Math.max(0, state.unreadCount - 1)
+              : state.unreadCount,
+          };
+        });
+      },
+    }),
+    {
+      name: 'mibe-notifications-storage',
+    }
+  )
+);
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
-  const [unreadCount, setUnreadCount] = useState(MOCK_NOTIFICATIONS.filter((n) => !n.read).length);
+  const store = useNotificationsStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchNotifications = useCallback(() => {
-    setNotifications(MOCK_NOTIFICATIONS);
-    setUnreadCount(MOCK_NOTIFICATIONS.filter((n) => !n.read).length);
+    // As notificações já estão no store persistido
+    setIsLoading(false);
   }, []);
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === notificationId ? { ...n, read: true } : n
-      )
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
-  };
+  // Função para criar notificação de nova venda
+  const notifySale = useCallback((customerName: string, amount: number, saleId?: string) => {
+    store.addNotification({
+      store_id: 'current',
+      type: 'sale',
+      title: 'Nova venda registrada',
+      message: `${customerName} realizou uma compra de R$ ${amount.toFixed(2).replace('.', ',')}`,
+      data: { sale_id: saleId, amount },
+    });
+  }, [store]);
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    setUnreadCount(0);
-  };
+  // Função para criar notificação de resgate
+  const notifyRedeem = useCallback((customerName: string, amount: number) => {
+    store.addNotification({
+      store_id: 'current',
+      type: 'redeem',
+      title: 'Cashback resgatado',
+      message: `${customerName} usou R$ ${amount.toFixed(2).replace('.', ',')} de saldo`,
+      data: { amount },
+    });
+  }, [store]);
 
-  const clearAll = () => {
-    setNotifications([]);
-    setUnreadCount(0);
-  };
+  // Função para criar notificação de novo cliente
+  const notifyNewCustomer = useCallback((customerName: string, customerId?: string) => {
+    store.addNotification({
+      store_id: 'current',
+      type: 'customer',
+      title: 'Novo cliente',
+      message: `${customerName} fez sua primeira compra na loja`,
+      data: { customer_id: customerId },
+    });
+  }, [store]);
+
+  // Função para criar notificação de aviso
+  const notifyWarning = useCallback((title: string, message: string) => {
+    store.addNotification({
+      store_id: 'current',
+      type: 'warning',
+      title,
+      message,
+    });
+  }, [store]);
+
+  // Função para criar notificação informativa
+  const notifyInfo = useCallback((title: string, message: string) => {
+    store.addNotification({
+      store_id: 'current',
+      type: 'info',
+      title,
+      message,
+    });
+  }, [store]);
 
   return {
-    notifications,
-    unreadCount,
+    notifications: store.notifications,
+    unreadCount: store.unreadCount,
     isLoading,
     fetchNotifications,
-    markAsRead,
-    markAllAsRead,
-    clearAll,
+    markAsRead: store.markAsRead,
+    markAllAsRead: store.markAllAsRead,
+    clearAll: store.clearAll,
+    removeNotification: store.removeNotification,
+    // Funções para criar notificações
+    notifySale,
+    notifyRedeem,
+    notifyNewCustomer,
+    notifyWarning,
+    notifyInfo,
   };
 }

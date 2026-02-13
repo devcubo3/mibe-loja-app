@@ -7,13 +7,14 @@ import {
   formatCPF,
   formatCurrency,
   formatDate,
+  formatPhone,
 } from '@/lib/formatters';
 import type { CustomerWithBalance } from '@/types/customer';
-import type { Sale } from '@/types/sale';
+import type { SaleWithCustomer } from '@/types/sale';
 
 interface CustomerDetailProps {
   customer: CustomerWithBalance;
-  recentSales: Sale[];
+  recentSales: SaleWithCustomer[];
 }
 
 export function CustomerDetail({ customer, recentSales }: CustomerDetailProps) {
@@ -33,10 +34,10 @@ export function CustomerDetail({ customer, recentSales }: CustomerDetailProps) {
       <Card variant="default" padding="none">
         {/* Header with Avatar */}
         <div className="bg-primary px-lg py-lg flex items-center gap-md rounded-t-md">
-          <Avatar name={customer.name} size="lg" />
+          <Avatar name={customer.full_name} size="lg" />
           <div>
             <p className="text-body-lg font-semibold text-white">
-              {customer.name}
+              {customer.full_name}
             </p>
             <Badge variant="light">{formatCPF(customer.cpf)}</Badge>
           </div>
@@ -44,7 +45,7 @@ export function CustomerDetail({ customer, recentSales }: CustomerDetailProps) {
 
         {/* Info Fields */}
         <div className="p-lg space-y-md">
-          <InfoField label="Nome completo" value={customer.name} />
+          <InfoField label="Nome completo" value={customer.full_name} />
           <InfoField label="CPF" value={formatCPF(customer.cpf)} />
           {customer.birth_date && (
             <InfoField
@@ -52,11 +53,8 @@ export function CustomerDetail({ customer, recentSales }: CustomerDetailProps) {
               value={formatDate(customer.birth_date)}
             />
           )}
-          {customer.email && (
-            <InfoField label="E-mail" value={customer.email} />
-          )}
           {customer.phone && (
-            <InfoField label="Telefone" value={customer.phone} />
+            <InfoField label="Telefone" value={formatPhone(customer.phone)} />
           )}
         </div>
       </Card>
@@ -86,10 +84,10 @@ export function CustomerDetail({ customer, recentSales }: CustomerDetailProps) {
               valueClass="text-success font-bold"
               bold
             />
-            {storeBalance?.last_purchase && (
+            {storeBalance?.last_purchase_date && (
               <StatRow
                 label="Última compra"
-                value={formatDate(storeBalance.last_purchase)}
+                value={formatDate(storeBalance.last_purchase_date)}
                 valueClass="text-text-secondary"
               />
             )}
@@ -119,19 +117,19 @@ export function CustomerDetail({ customer, recentSales }: CustomerDetailProps) {
                   }`}
                 >
                   <div>
-                    <p className="text-body">{formatDate(sale.created_at)}</p>
+                    <p className="text-body">{formatDate(sale.created_at || '')}</p>
                     <p className="text-caption text-text-secondary">
-                      {formatCurrency(sale.purchase_amount || 0)}
+                      {formatCurrency(sale.total_amount || 0)}
                     </p>
                   </div>
                   <div className="flex items-center gap-sm">
-                    {sale.balance_used && sale.balance_used > 0 ? (
+                    {sale.cashback_redeemed && sale.cashback_redeemed > 0 ? (
                       <span className="text-error">
-                        -{formatCurrency(sale.balance_used)}
+                        -{formatCurrency(sale.cashback_redeemed)}
                       </span>
                     ) : (
                       <span className="text-success">
-                        +{formatCurrency(sale.cashback_generated || 0)}
+                        +{formatCurrency(sale.cashback_earned || 0)}
                       </span>
                     )}
                     <ChevronRight className="w-4 h-4 text-text-muted" />

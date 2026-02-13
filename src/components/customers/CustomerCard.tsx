@@ -23,10 +23,10 @@ export function CustomerCard({ customer }: CustomerCardProps) {
       >
         {/* Header */}
         <div className="flex items-center gap-md mb-md">
-          <Avatar name={customer.name} size="md" />
+          <Avatar name={customer.full_name} size="md" />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-text-primary truncate">
-              {customer.name}
+              {customer.full_name}
             </p>
             <p className="text-caption text-text-secondary">
               CPF: {formatCPF(customer.cpf)}
@@ -37,10 +37,10 @@ export function CustomerCard({ customer }: CustomerCardProps) {
         {/* Stats */}
         <div className="text-caption text-text-secondary mb-md">
           <span>{storeBalance?.total_purchases || 0} compras</span>
-          {storeBalance?.last_purchase && (
+          {storeBalance?.last_purchase_date && (
             <>
               <span className="mx-1">•</span>
-              <span>Última: {formatDate(storeBalance.last_purchase)}</span>
+              <span>Última: {formatDate(storeBalance.last_purchase_date)}</span>
             </>
           )}
         </div>
