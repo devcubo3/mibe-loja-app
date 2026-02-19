@@ -44,6 +44,9 @@ public/worker-*.js.map
 public/fallback-*.js
 public/fallback-*.js.map
 
+# Claude
+.claude/settings.local.json
+
 # IDEs
 .vscode/
 .idea/
