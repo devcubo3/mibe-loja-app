@@ -265,7 +265,7 @@ export function useCustomers() {
         .from('profiles')
         .select('id, full_name, cpf, phone, birth_date, created_at')
         .eq('cpf', cleanCpf)
-        .single();
+        .maybeSingle();
 
       if (profileError || !profile) return null;
 
@@ -275,7 +275,7 @@ export function useCustomers() {
         .select('current_balance, last_purchase_date')
         .eq('company_id', company.id)
         .eq('user_id', profile.id)
-        .single();
+        .maybeSingle();
 
       // Buscar estatísticas de transações
       const { data: transactions } = await supabase

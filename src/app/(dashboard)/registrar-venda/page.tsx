@@ -29,15 +29,35 @@ export default function RegisterSalePage() {
   const [error, setError] = useState<string | null>(null);
 
   const handleQRScan = (data: string) => {
+    const trimmed = data.trim();
+
+    // Tentar JSON primeiro
     try {
-      const parsed = JSON.parse(data);
+      const parsed = JSON.parse(trimmed);
       if (parsed.cpf) {
         searchCustomer(parsed.cpf);
+        return;
       } else if (parsed.id) {
         searchCustomerById(parsed.id);
+        return;
       }
     } catch {
-      searchCustomer(data.replace(/\D/g, ''));
+      // Não é JSON, continuar para detecção abaixo
+    }
+
+    // Verificar se é UUID raw (formato do QR code do cliente)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(trimmed)) {
+      searchCustomerById(trimmed);
+      return;
+    }
+
+    // Fallback: tratar como CPF (só dígitos, 11 chars)
+    const digits = trimmed.replace(/\D/g, '');
+    if (digits.length === 11) {
+      searchCustomer(digits);
+    } else {
+      setError('QR Code inválido. Use o QR Code do app MIBE.');
     }
   };
 
