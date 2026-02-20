@@ -45,8 +45,19 @@ export default function RegisterSalePage() {
       // Não é JSON, continuar para detecção abaixo
     }
 
-    // Verificar se é UUID raw (formato do QR code do cliente)
+    // Regex para validar UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // Verificar formato MIBE_USER:<UUID> (formato oficial do QR code do app MIBE)
+    if (trimmed.startsWith('MIBE_USER:')) {
+      const userId = trimmed.substring('MIBE_USER:'.length);
+      if (uuidRegex.test(userId)) {
+        searchCustomerById(userId);
+        return;
+      }
+    }
+
+    // Verificar se é UUID raw
     if (uuidRegex.test(trimmed)) {
       searchCustomerById(trimmed);
       return;
