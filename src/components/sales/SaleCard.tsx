@@ -27,7 +27,7 @@ export function SaleCard({ sale }: SaleCardProps) {
         {/* Header */}
         <div className="flex items-start justify-between mb-md">
           <div className="flex items-center gap-md">
-            <Avatar name={sale.customer?.full_name || 'Cliente'} size="md" />
+            <Avatar name={sale.customer?.full_name || 'Cliente'} size="md" src={sale.customer?.avatar_url || undefined} />
             <div>
               <p className="font-semibold text-text-primary">
                 {sale.customer?.full_name || 'Cliente'}

@@ -339,6 +339,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           birth_date: string | null
           cpf: string
           created_at: string | null
@@ -348,6 +349,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"] | null
         }
         Insert: {
+          avatar_url?: string | null
           birth_date?: string | null
           cpf: string
           created_at?: string | null
@@ -357,6 +359,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"] | null
         }
         Update: {
+          avatar_url?: string | null
           birth_date?: string | null
           cpf?: string
           created_at?: string | null

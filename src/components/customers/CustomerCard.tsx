@@ -23,7 +23,7 @@ export function CustomerCard({ customer }: CustomerCardProps) {
       >
         {/* Header */}
         <div className="flex items-center gap-md mb-md">
-          <Avatar name={customer.full_name} size="md" />
+          <Avatar name={customer.full_name} size="md" src={customer.avatar_url || undefined} />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-text-primary truncate">
               {customer.full_name}

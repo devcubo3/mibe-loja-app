@@ -42,7 +42,7 @@ export function CustomerPreview({
       <Card variant="default" padding="lg">
         {/* Header with Avatar */}
         <div className="bg-primary -mx-lg -mt-lg px-lg py-lg mb-lg rounded-t-md flex items-center gap-md">
-          <Avatar name={customer.full_name} size="lg" />
+          <Avatar name={customer.full_name} size="lg" src={customer.avatar_url || undefined} />
           <div>
             <p className="text-body-lg font-semibold text-white">
               {customer.full_name}

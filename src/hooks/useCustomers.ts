@@ -47,7 +47,8 @@ export function useCustomers() {
               cpf,
               phone,
               birth_date,
-              created_at
+              created_at,
+              avatar_url
             )
           `, { count: 'exact' })
           .eq('company_id', company.id);
@@ -108,6 +109,7 @@ export function useCustomers() {
             phone: b.profiles.phone,
             birth_date: b.profiles.birth_date,
             created_at: b.profiles.created_at,
+            avatar_url: b.profiles.avatar_url,
             storeBalance: {
               customer_id: b.user_id,
               company_id: b.company_id,
@@ -178,7 +180,8 @@ export function useCustomers() {
             cpf,
             phone,
             birth_date,
-            created_at
+            created_at,
+            avatar_url
           )
         `)
         .eq('company_id', company.id)
@@ -189,7 +192,7 @@ export function useCustomers() {
         // Cliente pode não ter saldo ainda, buscar só o profile
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .select('id, full_name, cpf, phone, birth_date, created_at')
+          .select('id, full_name, cpf, phone, birth_date, created_at, avatar_url')
           .eq('id', id)
           .single();
 
@@ -202,6 +205,7 @@ export function useCustomers() {
           phone: profile.phone,
           birth_date: profile.birth_date,
           created_at: profile.created_at,
+          avatar_url: profile.avatar_url,
           storeBalance: {
             customer_id: profile.id,
             company_id: company.id,
@@ -239,6 +243,7 @@ export function useCustomers() {
         phone: profile.phone,
         birth_date: profile.birth_date,
         created_at: profile.created_at,
+        avatar_url: profile.avatar_url,
         storeBalance: {
           customer_id: balance.user_id!,
           company_id: balance.company_id!,
@@ -263,7 +268,7 @@ export function useCustomers() {
       // Buscar profile pelo CPF
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name, cpf, phone, birth_date, created_at')
+        .select('id, full_name, cpf, phone, birth_date, created_at, avatar_url')
         .eq('cpf', cleanCpf)
         .maybeSingle();
 
@@ -300,6 +305,7 @@ export function useCustomers() {
         phone: profile.phone,
         birth_date: profile.birth_date,
         created_at: profile.created_at,
+        avatar_url: profile.avatar_url,
         storeBalance: {
           customer_id: profile.id,
           company_id: company.id,

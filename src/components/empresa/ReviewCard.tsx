@@ -43,7 +43,7 @@ export function ReviewCard({ review, onReply }: ReviewCardProps) {
     <div className="bg-input-bg rounded-lg p-md">
       {/* Header */}
       <div className="flex items-start gap-md">
-        <Avatar name={review.customer_name} size="md" />
+        <Avatar name={review.customer_name} size="md" src={review.customer_avatar_url || undefined} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-sm">
             <p className="font-semibold text-text-primary truncate">

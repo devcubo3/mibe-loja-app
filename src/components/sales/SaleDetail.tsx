@@ -38,7 +38,7 @@ export function SaleDetail({ sale }: SaleDetailProps) {
         <Card variant="default" padding="md">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-md">
-              <Avatar name={sale.customer?.full_name || 'Cliente'} size="md" />
+              <Avatar name={sale.customer?.full_name || 'Cliente'} size="md" src={sale.customer?.avatar_url || undefined} />
               <div>
                 <p className="font-semibold">{sale.customer?.full_name || 'Cliente'}</p>
                 <p className="text-caption text-text-secondary">

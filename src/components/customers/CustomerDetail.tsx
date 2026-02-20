@@ -34,7 +34,7 @@ export function CustomerDetail({ customer, recentSales }: CustomerDetailProps) {
       <Card variant="default" padding="none">
         {/* Header with Avatar */}
         <div className="bg-primary px-lg py-lg flex items-center gap-md rounded-t-md">
-          <Avatar name={customer.full_name} size="lg" />
+          <Avatar name={customer.full_name} size="lg" src={customer.avatar_url || undefined} />
           <div>
             <p className="text-body-lg font-semibold text-white">
               {customer.full_name}

@@ -6,6 +6,7 @@ export interface Customer {
   phone: string | null;
   birth_date: string | null;
   created_at: string | null;
+  avatar_url?: string | null;
 }
 
 // Saldo do cliente na empresa

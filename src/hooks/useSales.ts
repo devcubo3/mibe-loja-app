@@ -74,7 +74,8 @@ export function useSales() {
             cpf,
             phone,
             birth_date,
-            created_at
+            created_at,
+            avatar_url
           )
         `)
         .eq('company_id', company.id)
@@ -109,6 +110,7 @@ export function useSales() {
           phone: t.profiles.phone,
           birth_date: t.profiles.birth_date,
           created_at: t.profiles.created_at,
+          avatar_url: t.profiles.avatar_url,
         } : null,
       }));
 
@@ -165,7 +167,8 @@ export function useSales() {
             cpf,
             phone,
             birth_date,
-            created_at
+            created_at,
+            avatar_url
           )
         `, { count: 'exact' })
         .eq('company_id', company.id);
@@ -230,6 +233,7 @@ export function useSales() {
           phone: t.profiles.phone,
           birth_date: t.profiles.birth_date,
           created_at: t.profiles.created_at,
+          avatar_url: t.profiles.avatar_url,
         } : null,
       }));
 
@@ -283,7 +287,8 @@ export function useSales() {
             cpf,
             phone,
             birth_date,
-            created_at
+            created_at,
+            avatar_url
           )
         `)
         .eq('id', id)
@@ -309,6 +314,7 @@ export function useSales() {
           phone: (data as any).profiles.phone,
           birth_date: (data as any).profiles.birth_date,
           created_at: (data as any).profiles.created_at,
+          avatar_url: (data as any).profiles.avatar_url,
         } : null,
       };
     } catch (err) {
@@ -349,7 +355,8 @@ export function useSales() {
             cpf,
             phone,
             birth_date,
-            created_at
+            created_at,
+            avatar_url
           )
         `)
         .single();
@@ -373,6 +380,7 @@ export function useSales() {
           phone: (newSale as any).profiles.phone,
           birth_date: (newSale as any).profiles.birth_date,
           created_at: (newSale as any).profiles.created_at,
+          avatar_url: (newSale as any).profiles.avatar_url,
         } : null,
       };
 

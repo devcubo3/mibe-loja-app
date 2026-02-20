@@ -63,7 +63,7 @@ export function RecentSales({ sales, isLoading }: RecentSalesProps) {
               href={`/vendas/${sale.id}`}
               className="flex items-center gap-md p-sm -mx-sm rounded-sm hover:bg-surface-secondary transition-colors"
             >
-              <Avatar name={sale.customer?.full_name || 'Cliente'} />
+              <Avatar name={sale.customer?.full_name || 'Cliente'} src={sale.customer?.avatar_url || undefined} />
               <div className="flex-1 min-w-0">
                 <p className="text-body font-medium truncate">
                   {sale.customer?.full_name || 'Cliente'}
