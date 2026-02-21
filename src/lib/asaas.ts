@@ -72,6 +72,47 @@ function getHeaders(): HeadersInit {
 }
 
 /**
+ * Cria um novo cliente no Asaas
+ */
+export async function createCustomer(params: {
+    name: string;
+    cpfCnpj: string;
+    email?: string;
+    phone?: string;
+    mobilePhone?: string;
+    externalReference?: string;
+    notificationDisabled?: boolean;
+}): Promise<{ success: true; customer: AsaasCustomer } | { success: false; error: string }> {
+    try {
+        const body = {
+            ...params,
+            cpfCnpj: params.cpfCnpj.replace(/\D/g, ''),
+        };
+
+        const response = await fetch(`${ASAAS_BASE_URL}/customers`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify(body),
+        });
+
+        const data: AsaasResponse<AsaasCustomer> = await response.json();
+
+        if (!response.ok || isAsaasError(data)) {
+            const errorMessage = isAsaasError(data)
+                ? data.errors.map(e => e.description).join(', ')
+                : 'Erro desconhecido ao criar cliente';
+            console.error('Erro ao criar cliente no Asaas:', data);
+            return { success: false, error: errorMessage };
+        }
+
+        return { success: true, customer: data };
+    } catch (error) {
+        console.error('Erro de conexão com Asaas (createCustomer):', error);
+        return { success: false, error: 'Erro ao comunicar com o sistema de pagamentos' };
+    }
+}
+
+/**
  * Busca cliente no Asaas por CNPJ ou CPF
  */
 export async function findCustomerByCnpj(cnpj: string): Promise<AsaasCustomer | null> {

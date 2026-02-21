@@ -63,7 +63,6 @@ export default function DashboardLayout({
       {/* Sidebar */}
       <Sidebar
         storeName={company?.business_name || 'Minha Loja'}
-        notificationCount={unreadCount}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onLogout={handleLogout}

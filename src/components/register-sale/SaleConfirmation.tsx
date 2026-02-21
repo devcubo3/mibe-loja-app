@@ -61,7 +61,7 @@ export function SaleConfirmation({ sale, onNewSale }: SaleConfirmationProps) {
       </Card>
 
       {/* Actions */}
-      <div className="space-y-sm">
+      <div className="space-y-md">
         <Button onClick={onNewSale} fullWidth>
           Nova Venda
         </Button>

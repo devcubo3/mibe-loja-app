@@ -9,7 +9,6 @@ import {
   Users,
   Building2,
   CreditCard,
-  Bell,
   User,
   LogOut,
   X,
@@ -20,7 +19,6 @@ import { cn } from '@/lib/utils';
 
 interface SidebarProps {
   storeName?: string;
-  notificationCount?: number;
   isOpen?: boolean;
   onClose?: () => void;
   onLogout?: () => void;
@@ -58,12 +56,6 @@ const menuItems = [
     href: '/planos',
     icon: CreditCard,
   },
-  {
-    label: 'Notificações',
-    href: '/notificacoes',
-    icon: Bell,
-    hasBadge: true,
-  },
 ];
 
 const bottomMenuItems = [
@@ -81,7 +73,6 @@ const bottomMenuItems = [
 
 export function Sidebar({
   storeName = 'Minha Loja',
-  notificationCount = 0,
   isOpen = false,
   onClose,
   onLogout,
@@ -150,11 +141,6 @@ export function Sidebar({
                   >
                     <Icon className="w-5 h-5" />
                     <span className="flex-1">{item.label}</span>
-                    {item.hasBadge && notificationCount > 0 && (
-                      <span className="bg-error text-white text-caption font-medium px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                        {notificationCount > 99 ? '99+' : notificationCount}
-                      </span>
-                    )}
                   </Link>
                 </li>
               );
