@@ -43,6 +43,9 @@ export async function POST(request: NextRequest) {
         if (data.category_id) updatePayload.category_id = data.category_id;
         if (data.logo_url) updatePayload.logo_url = data.logo_url;
         if (data.cover_image) updatePayload.cover_url = data.cover_image;
+        if (data.address !== undefined) updatePayload.address = data.address;
+        if (data.latitude !== undefined) updatePayload.latitude = data.latitude;
+        if (data.longitude !== undefined) updatePayload.longitude = data.longitude;
 
         const { error } = await supabase
             .from('companies')

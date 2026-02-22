@@ -28,6 +28,9 @@ export interface CompanyData {
   rating: number;
   total_reviews: number;
   created_at: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export interface AuthState {

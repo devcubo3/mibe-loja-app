@@ -39,7 +39,10 @@ export async function GET(request: NextRequest) {
         has_expiration,
         expiration_days,
         category_id,
-        created_at
+        created_at,
+        address,
+        latitude,
+        longitude
       `)
             .eq('id', companyId)
             .single();
@@ -95,6 +98,9 @@ export async function GET(request: NextRequest) {
                 rating: Math.round(avgRating * 10) / 10,
                 total_reviews: totalReviews,
                 created_at: company.created_at,
+                address: company.address || null,
+                latitude: company.latitude || null,
+                longitude: company.longitude || null,
             },
         });
     } catch (error) {

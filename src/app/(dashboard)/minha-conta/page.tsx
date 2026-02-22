@@ -12,6 +12,7 @@ import {
   MessageCircle,
   LogOut,
   ChevronRight,
+  MapPin,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +21,7 @@ import {
   ProfilePhotoUpload,
   ChangePasswordModal,
   LogoutConfirmModal,
+  LocationModal,
 } from '@/components/minha-conta';
 // Note: CompanyUser only has name and email editable fields
 
@@ -33,11 +35,12 @@ type FormData = z.infer<typeof schema>;
 
 export default function MinhaContaPage() {
   const router = useRouter();
-  const { user, token, logout } = useAuth();
+  const { user, company, token, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const {
@@ -210,6 +213,33 @@ export default function MinhaContaPage() {
         </section>
       )}
 
+      {/* Location Section */}
+      <section className="mb-lg">
+        <h2 className="section-title mb-md">Localização</h2>
+        <Card
+          variant="default"
+          padding="md"
+          hoverable
+          onClick={() => setShowLocationModal(true)}
+          className="cursor-pointer"
+        >
+          <div className="flex items-center gap-md">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+              <MapPin className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-text-primary">
+                {company?.address ? 'Editar localização' : 'Adicionar localização'}
+              </p>
+              <p className="text-caption text-text-secondary">
+                {company?.address || 'Informe o endereço e posição no mapa'}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-text-muted" />
+          </div>
+        </Card>
+      </section>
+
       {/* Support Section */}
       <section className="mb-lg">
         <h2 className="section-title mb-md">Suporte</h2>
@@ -265,6 +295,11 @@ export default function MinhaContaPage() {
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
         isLoading={isLoggingOut}
+      />
+
+      <LocationModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
       />
     </div>
   );

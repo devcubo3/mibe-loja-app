@@ -40,6 +40,8 @@ export interface StoreUpdateData {
   has_min_purchase?: boolean;
   min_purchase?: number;
   category_id?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Review {
