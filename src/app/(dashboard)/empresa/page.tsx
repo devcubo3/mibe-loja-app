@@ -6,6 +6,7 @@ import {
   Lock,
   ChevronRight,
   Pencil,
+  MapPin,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, Button, Badge, Avatar } from '@/components/ui';
@@ -16,6 +17,7 @@ import {
   ReviewCard,
   StarRating,
   EditStoreModal,
+  LocationModal,
 } from '@/components/empresa';
 import { formatCNPJ, formatCurrency } from '@/lib/formatters';
 import type { StoreUpdateData, Review } from '@/types/store';
@@ -62,6 +64,7 @@ export default function EmpresaPage() {
   const router = useRouter();
   const { company, loadCompany } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
   const [photos, setPhotos] = useState<string[]>(company?.photos || []);
   const [reviews] = useState<Review[]>(MOCK_REVIEWS);
 
@@ -200,6 +203,33 @@ export default function EmpresaPage() {
           </Card>
         </section>
 
+        {/* Localização */}
+        <section className="mb-lg">
+          <h2 className="section-title mb-md">Localização</h2>
+          <Card
+            variant="default"
+            padding="md"
+            hoverable
+            onClick={() => setShowLocationModal(true)}
+            className="cursor-pointer"
+          >
+            <div className="flex items-center gap-md">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <MapPin className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-text-primary">
+                  {company?.address ? 'Editar localização' : 'Adicionar localização'}
+                </p>
+                <p className="text-caption text-text-secondary">
+                  {company?.address || 'Informe o endereço e posição no mapa'}
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-text-muted" />
+            </div>
+          </Card>
+        </section>
+
         {/* Configurações de Cashback */}
         <section className="mb-lg">
           <div className="flex items-center justify-between mb-md">
@@ -306,12 +336,17 @@ export default function EmpresaPage() {
         </p>
       </div>
 
-      {/* Edit Modal */}
+      {/* Modals */}
       <EditStoreModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         store={company}
         onSave={handleSave}
+      />
+
+      <LocationModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
       />
     </div>
   );
