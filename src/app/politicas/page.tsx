@@ -1,14 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 import { Shield, FileText, UserX, ChevronUp } from 'lucide-react';
 import Logo from '@/components/Logo';
 import './politicas.css';
 
 type Section = 'privacidade' | 'termos' | 'exclusao';
 
-export default function PoliticasPage() {
-  const [activeSection, setActiveSection] = useState<Section>('privacidade');
+const VALID_SECTIONS: Section[] = ['privacidade', 'termos', 'exclusao'];
+
+function PoliticasContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const pageParam = searchParams.get('page') as Section | null;
+  const activeSection: Section = pageParam && VALID_SECTIONS.includes(pageParam) ? pageParam : 'privacidade';
+
+  const setActiveSection = (section: Section) => {
+    router.push(`/politicas?page=${section}`, { scroll: false });
+  };
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -18,6 +29,7 @@ export default function PoliticasPage() {
     <div className="min-h-screen bg-[#FAFAFA]">
       {/* Header */}
       <header className="bg-white border-b border-[#E5E5E5] sticky top-0 z-10">
+
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Logo width={100} color="#181818" />
           <div className="h-8 w-px bg-[#E5E5E5]" />
@@ -86,6 +98,14 @@ export default function PoliticasPage() {
         <ChevronUp size={20} />
       </button>
     </div>
+  );
+}
+
+export default function PoliticasPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FAFAFA]" />}>
+      <PoliticasContent />
+    </Suspense>
   );
 }
 
