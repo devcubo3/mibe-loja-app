@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DashboardStats, SaleWithCustomer, Customer, CreateSaleData, SalesFilters } from '@/types/sale';
 import { useAuth } from './useAuth';
+import { storeService } from '@/services/storeService';
 
 export function useSales() {
   const { company } = useAuth();
@@ -329,65 +330,36 @@ export function useSales() {
     }
 
     try {
-      const { data: newSale, error } = await supabase
-        .from('transactions')
-        .insert({
-          company_id: company.id,
+      const token = storeService.getAuthToken();
+      if (!token) {
+        return { success: false, error: 'Não autenticado' };
+      }
+
+      const response = await fetch('/api/sales/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
           user_id: data.user_id,
           total_amount: data.total_amount,
           cashback_redeemed: data.cashback_redeemed,
           net_amount_paid: data.net_amount_paid,
           cashback_earned: data.cashback_earned,
-        })
-        .select(`
-          id,
-          company_id,
-          user_id,
-          total_amount,
-          cashback_redeemed,
-          net_amount_paid,
-          cashback_earned,
-          admin_fee_amount,
-          created_at,
-          profiles:user_id (
-            id,
-            full_name,
-            cpf,
-            phone,
-            birth_date,
-            created_at,
-            avatar_url
-          )
-        `)
-        .single();
+        }),
+      });
 
-      if (error) throw error;
+      const result = await response.json();
 
-      const sale: SaleWithCustomer = {
-        id: newSale.id,
-        company_id: newSale.company_id,
-        user_id: newSale.user_id,
-        total_amount: newSale.total_amount,
-        cashback_redeemed: (newSale as any).cashback_redeemed || 0,
-        net_amount_paid: newSale.net_amount_paid,
-        cashback_earned: newSale.cashback_earned,
-        admin_fee_amount: newSale.admin_fee_amount,
-        created_at: newSale.created_at,
-        customer: (newSale as any).profiles ? {
-          id: (newSale as any).profiles.id,
-          full_name: (newSale as any).profiles.full_name,
-          cpf: (newSale as any).profiles.cpf,
-          phone: (newSale as any).profiles.phone,
-          birth_date: (newSale as any).profiles.birth_date,
-          created_at: (newSale as any).profiles.created_at,
-          avatar_url: (newSale as any).profiles.avatar_url,
-        } : null,
-      };
+      if (!response.ok) {
+        return { success: false, error: result.error || 'Erro ao registrar venda' };
+      }
 
       // Recarregar estatísticas
       loadStats();
 
-      return { success: true, sale };
+      return { success: true, sale: result.sale };
     } catch (err: any) {
       console.error('Erro ao criar venda:', err);
       return { success: false, error: err.message || 'Erro ao registrar venda' };
