@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Button, Input } from '@/components/ui';
+import { supabase } from '@/lib/supabase';
 
 const schema = z
   .object({
@@ -25,6 +26,7 @@ type FormData = z.infer<typeof schema>;
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const type = searchParams.get('type');
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -43,19 +45,17 @@ function ResetPasswordContent() {
     setError(null);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token,
-          new_password: data.new_password,
-        }),
+      const { data: result, error: fnError } = await supabase.functions.invoke('reset-password', {
+        body: { token, new_password: data.new_password, type },
       });
 
-      const result = await response.json();
+      if (fnError) {
+        setError('Erro ao redefinir senha');
+        return;
+      }
 
-      if (!response.ok) {
-        setError(result.error || 'Erro ao redefinir senha');
+      if (result?.error) {
+        setError(result.error);
         return;
       }
 
@@ -67,8 +67,8 @@ function ResetPasswordContent() {
     }
   };
 
-  // Sem token na URL — acesso inválido
-  if (!token) {
+  // Sem token ou sem type na URL — acesso inválido
+  if (!token || !type) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-lg">
         <div className="w-full max-w-sm text-center">

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,6 +9,7 @@ import { z } from 'zod';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Button, Input } from '@/components/ui';
+import { supabase } from '@/lib/supabase';
 
 const schema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -15,7 +17,10 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordContent() {
+  const searchParams = useSearchParams();
+  const type = searchParams.get('type') || 'company_user';
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,16 +33,31 @@ export default function ForgotPasswordPage() {
     resolver: zodResolver(schema),
   });
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     setIsLoading(true);
     setError(null);
 
-    // Simular envio de e-mail
-    setTimeout(() => {
-      console.log('E-mail de recuperação enviado para:', data.email);
+    try {
+      const { data: result, error: fnError } = await supabase.functions.invoke('forgot-password', {
+        body: { email: data.email, type },
+      });
+
+      if (fnError) {
+        setError('Erro ao enviar e-mail');
+        return;
+      }
+
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+
       setIsSuccess(true);
+    } catch {
+      setError('Erro ao conectar com o servidor');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   if (isSuccess) {
@@ -105,5 +125,13 @@ export default function ForgotPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center" />}>
+      <ForgotPasswordContent />
+    </Suspense>
   );
 }
