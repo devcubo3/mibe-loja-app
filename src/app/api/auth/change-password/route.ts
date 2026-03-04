@@ -1,38 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
+import { validateAuth, AuthError } from '@/lib/auth-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
-    }
+    const auth = await validateAuth(request);
+    if (auth instanceof AuthError) return auth.toResponse();
 
-    const token = authHeader.replace('Bearer ', '');
-
-    // Decodificar token
-    let tokenData: { userId: string; companyId: string; exp: number };
-    try {
-      tokenData = JSON.parse(Buffer.from(token, 'base64').toString());
-    } catch {
-      return NextResponse.json(
-        { error: 'Token inválido' },
-        { status: 401 }
-      );
-    }
-
-    // Verificar expiração
-    if (tokenData.exp < Date.now()) {
-      return NextResponse.json(
-        { error: 'Token expirado' },
-        { status: 401 }
-      );
-    }
-
+    const { userId } = auth;
     const { currentPassword, newPassword } = await request.json();
 
     if (!currentPassword || !newPassword) {
@@ -51,41 +26,28 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Buscar usuário pelo ID do token
-    const { data: user, error: userError } = await supabase
-      .from('company_users')
-      .select('id, password_hash')
-      .eq('id', tokenData.userId)
-      .eq('is_active', true)
-      .single();
-
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: 'Usuário não encontrado' },
-        { status: 404 }
-      );
+    // Verificar senha atual tentando fazer login
+    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+    if (!authUser?.email) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
-    // Verificar senha atual
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
-    if (!isValidPassword) {
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: authUser.email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
       return NextResponse.json(
         { error: 'Senha atual incorreta' },
         { status: 400 }
       );
     }
 
-    // Hash da nova senha
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
-
-    // Atualizar senha
-    const { error: updateError } = await supabase
-      .from('company_users')
-      .update({
-        password_hash: newPasswordHash,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', tokenData.userId);
+    // Atualizar senha via admin API
+    const { error: updateError } = await supabase.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    });
 
     if (updateError) {
       console.error('Erro ao atualizar senha:', updateError);

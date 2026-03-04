@@ -1,30 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validateAuth, AuthError } from '@/lib/auth-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await validateAuth(request);
+    if (auth instanceof AuthError) return auth.toResponse();
+
+    const { companyId } = auth;
     const supabaseAdmin = getSupabaseAdmin();
 
-    // 1. Validar token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let companyId: string;
-
-    try {
-      const tokenData = JSON.parse(atob(token));
-      if (tokenData.exp < Date.now()) {
-        return NextResponse.json({ error: 'Sessão expirada' }, { status: 401 });
-      }
-      companyId = tokenData.companyId;
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
-    }
-
-    // 2. Validar body
+    // Validar body
     const body = await request.json();
     const { user_id, total_amount, cashback_redeemed, net_amount_paid, cashback_earned } = body;
 
@@ -44,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valor de cashback inválido' }, { status: 400 });
     }
 
-    // 3. Inserir transação com admin client (bypassa RLS)
+    // Inserir transação com admin client (bypassa RLS)
     const { data: newSale, error: insertError } = await supabaseAdmin
       .from('transactions')
       .insert({
@@ -85,7 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Formatar resposta no formato SaleWithCustomer
+    // Formatar resposta no formato SaleWithCustomer
     const sale = {
       id: newSale.id,
       company_id: newSale.company_id,

@@ -26,7 +26,6 @@ type FormData = z.infer<typeof schema>;
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  const type = searchParams.get('type');
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -46,7 +45,7 @@ function ResetPasswordContent() {
 
     try {
       const { data: result, error: fnError } = await supabase.functions.invoke('reset-password', {
-        body: { token, new_password: data.new_password, type },
+        body: { token, new_password: data.new_password },
       });
 
       if (fnError) {
@@ -67,8 +66,8 @@ function ResetPasswordContent() {
     }
   };
 
-  // Sem token ou sem type na URL — acesso inválido
-  if (!token || !type) {
+  // Sem token na URL — acesso inválido
+  if (!token) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-lg">
         <div className="w-full max-w-sm text-center">

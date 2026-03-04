@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +24,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, new_password, type } = await req.json();
+    const { token, new_password } = await req.json();
 
     if (!token) {
       return new Response(
@@ -41,13 +40,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!type || (type !== "company_user" && type !== "profile")) {
-      return new Response(
-        JSON.stringify({ error: "Tipo de usuário inválido" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -56,12 +48,11 @@ Deno.serve(async (req) => {
     // Calcular hash do token recebido
     const tokenHash = await sha256(token);
 
-    // Buscar token válido
+    // Buscar token válido (todos são type "profile" agora)
     const { data: resetToken, error: tokenError } = await supabase
       .from("password_reset_tokens")
-      .select("id, user_id, user_type, expires_at")
+      .select("id, user_id, expires_at")
       .eq("token_hash", tokenHash)
-      .eq("user_type", type)
       .is("used_at", null)
       .single();
 
@@ -80,39 +71,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Atualizar senha conforme o tipo
-    if (resetToken.user_type === "company_user") {
-      const salt = await bcrypt.genSalt(10);
-      const newPasswordHash = await bcrypt.hash(new_password, salt);
+    // Atualizar senha via Supabase Auth (unificado, sem bcrypt)
+    const { error: authError } = await supabase.auth.admin.updateUserById(
+      resetToken.user_id,
+      { password: new_password }
+    );
 
-      const { error: updateError } = await supabase
-        .from("company_users")
-        .update({
-          password_hash: newPasswordHash,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", resetToken.user_id);
-
-      if (updateError) {
-        console.error("Erro ao atualizar senha (company_user):", updateError);
-        return new Response(
-          JSON.stringify({ error: "Erro ao atualizar senha" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    } else {
-      const { error: authError } = await supabase.auth.admin.updateUserById(
-        resetToken.user_id,
-        { password: new_password }
+    if (authError) {
+      console.error("Erro ao atualizar senha:", authError);
+      return new Response(
+        JSON.stringify({ error: "Erro ao atualizar senha" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-
-      if (authError) {
-        console.error("Erro ao atualizar senha (profile):", authError);
-        return new Response(
-          JSON.stringify({ error: "Erro ao atualizar senha" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
     }
 
     // Marcar token como usado

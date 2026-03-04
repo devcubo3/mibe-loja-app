@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { createCustomer } from '@/lib/asaas';
 
@@ -39,20 +38,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Verificar se já existe usuário com esse email
-    const { data: existingUser } = await supabase
-      .from('company_users')
-      .select('id')
-      .eq('email', user.email)
-      .single();
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'Já existe uma conta com este e-mail' },
-        { status: 409 }
-      );
-    }
-
     // Verificar se já existe empresa com esse CNPJ
     const cnpjClean = company.cnpj.replace(/\D/g, '');
     const { data: existingCompany } = await supabase
@@ -68,7 +53,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Criar a empresa
+    // Criar usuário no Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: user.email.trim().toLowerCase(),
+      password: user.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: user.name.trim(),
+      },
+    });
+
+    if (authError || !authData.user) {
+      console.error('Erro ao criar usuário no auth:', authError);
+      // Verificar se é email duplicado
+      if (authError?.message?.includes('already been registered') || authError?.message?.includes('duplicate')) {
+        return NextResponse.json(
+          { error: 'Já existe uma conta com este e-mail' },
+          { status: 409 }
+        );
+      }
+      return NextResponse.json(
+        { error: 'Erro ao criar conta. Tente novamente.' },
+        { status: 500 }
+      );
+    }
+
+    const userId = authData.user.id;
+
+    // Criar profile com role company_owner
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        full_name: user.name.trim(),
+        cpf: null,
+        role: 'company_owner',
+        onboarding_completed: false,
+      });
+
+    if (profileError) {
+      console.error('Erro ao criar profile:', profileError);
+      await supabase.auth.admin.deleteUser(userId);
+      return NextResponse.json(
+        { error: 'Erro ao criar conta. Tente novamente.' },
+        { status: 500 }
+      );
+    }
+
+    // Criar a empresa com owner_id
     const { data: newCompany, error: companyError } = await supabase
       .from('companies')
       .insert({
@@ -81,45 +113,23 @@ export async function POST(request: NextRequest) {
         min_purchase_value: 0,
         has_expiration: false,
         expiration_days: 30,
+        owner_id: userId,
       })
       .select('id')
       .single();
 
     if (companyError || !newCompany) {
       console.error('Erro ao criar empresa:', companyError);
+      // Rollback
+      await supabase.from('profiles').delete().eq('id', userId);
+      await supabase.auth.admin.deleteUser(userId);
       return NextResponse.json(
         { error: 'Erro ao criar empresa. Tente novamente.' },
         { status: 500 }
       );
     }
 
-    // Hash da senha
-    const passwordHash = await bcrypt.hash(user.password, 10);
-
-    // Criar o usuário vinculado à empresa
-    const { data: newUser, error: userError } = await supabase
-      .from('company_users')
-      .insert({
-        company_id: newCompany.id,
-        name: user.name.trim(),
-        email: user.email.trim().toLowerCase(),
-        password_hash: passwordHash,
-        is_active: true,
-      })
-      .select('id, name, email, company_id, created_at, updated_at')
-      .single();
-
-    if (userError || !newUser) {
-      console.error('Erro ao criar usuário:', userError);
-      // Rollback: remover empresa criada
-      await supabase.from('companies').delete().eq('id', newCompany.id);
-      return NextResponse.json(
-        { error: 'Erro ao criar conta. Tente novamente.' },
-        { status: 500 }
-      );
-    }
-
-    // Criar cliente no Asaas (non-blocking - não falha o registro)
+    // Criar cliente no Asaas (non-blocking)
     try {
       const asaasResult = await createCustomer({
         name: company.business_name.trim(),
@@ -134,13 +144,25 @@ export async function POST(request: NextRequest) {
           .from('companies')
           .update({ asaas_customer_id: asaasResult.customer.id })
           .eq('id', newCompany.id);
-
-        console.log(`Asaas customer created: ${asaasResult.customer.id} for company ${newCompany.id}`);
       } else {
         console.error(`Falha ao criar cliente Asaas para empresa ${newCompany.id}:`, asaasResult.error);
       }
     } catch (asaasError) {
       console.error('Erro inesperado ao criar cliente Asaas:', asaasError);
+    }
+
+    // Fazer login para obter session tokens
+    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+      email: user.email.trim().toLowerCase(),
+      password: user.password,
+    });
+
+    if (sessionError || !sessionData.session) {
+      console.error('Erro ao criar sessão após registro:', sessionError);
+      return NextResponse.json(
+        { error: 'Conta criada, mas erro ao fazer login. Tente fazer login manualmente.' },
+        { status: 500 }
+      );
     }
 
     // Buscar categoria
@@ -154,26 +176,17 @@ export async function POST(request: NextRequest) {
       if (category) categoryName = category.name;
     }
 
-    // Gerar token
-    const sessionToken = Buffer.from(
-      JSON.stringify({
-        userId: newUser.id,
-        companyId: newCompany.id,
-        exp: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 dias
-      })
-    ).toString('base64');
-
     return NextResponse.json({
       success: true,
-      token: sessionToken,
+      token: sessionData.session.access_token,
+      refresh_token: sessionData.session.refresh_token,
       user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        company_id: newUser.company_id,
+        id: userId,
+        name: user.name.trim(),
+        email: user.email.trim().toLowerCase(),
+        company_id: newCompany.id,
         onboarding_completed: false,
-        created_at: newUser.created_at,
-        updated_at: newUser.updated_at,
+        created_at: new Date().toISOString(),
       },
       company: {
         id: newCompany.id,
@@ -193,6 +206,9 @@ export async function POST(request: NextRequest) {
         rating: 0,
         total_reviews: 0,
         created_at: new Date().toISOString(),
+        address: null,
+        latitude: null,
+        longitude: null,
       },
     });
   } catch (error) {

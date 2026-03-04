@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,8 +18,6 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 function ForgotPasswordContent() {
-  const searchParams = useSearchParams();
-  const type = searchParams.get('type') || 'company_user';
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -39,7 +37,7 @@ function ForgotPasswordContent() {
 
     try {
       const { data: result, error: fnError } = await supabase.functions.invoke('forgot-password', {
-        body: { email: data.email, type },
+        body: { email: data.email },
       });
 
       if (fnError) {

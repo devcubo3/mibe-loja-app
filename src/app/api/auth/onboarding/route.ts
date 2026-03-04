@@ -1,33 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validateAuth, AuthError } from '@/lib/auth-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-
-    // Decodificar token
-    let tokenData: { userId: string; companyId: string; exp: number };
-    try {
-      tokenData = JSON.parse(Buffer.from(token, 'base64').toString());
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
-    }
-
-    if (tokenData.exp < Date.now()) {
-      return NextResponse.json({ error: 'Token expirado' }, { status: 401 });
-    }
+    const auth = await validateAuth(request);
+    if (auth instanceof AuthError) return auth.toResponse();
 
     const supabase = getSupabaseAdmin();
 
     const { error } = await supabase
-      .from('company_users')
+      .from('profiles')
       .update({ onboarding_completed: true })
-      .eq('id', tokenData.userId);
+      .eq('id', auth.userId);
 
     if (error) {
       console.error('Erro ao atualizar onboarding:', error);

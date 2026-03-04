@@ -57,9 +57,12 @@ export const storeService = {
         const token = this.getAuthToken();
         if (!token) throw new Error('Não autenticado');
 
-        // Para o upload, precisamos do ID da empresa que está no token
-        const tokenData = JSON.parse(atob(token));
-        const companyId = tokenData.companyId;
+        // Buscar companyId do Zustand state (não mais do token)
+        const storage = localStorage.getItem('mibe-auth-storage');
+        if (!storage) throw new Error('Não autenticado');
+        const parsed = JSON.parse(storage);
+        const companyId = parsed.state?.company?.id;
+        if (!companyId) throw new Error('Empresa não encontrada');
 
         const fileExt = file.name.split('.').pop();
         const fileName = `${companyId}/${type}_${Date.now()}.${fileExt}`;

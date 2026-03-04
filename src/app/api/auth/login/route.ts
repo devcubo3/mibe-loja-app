@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/database';
-
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,42 +12,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar usuário pelo email
-    const { data: companyUser, error: userError } = await supabase
-      .from('company_users')
-      .select(`
-        id,
-        company_id,
-        name,
-        email,
-        password_hash,
-        is_active,
-        onboarding_completed,
-        created_at,
-        updated_at
-      `)
-      .eq('email', email)
-      .eq('is_active', true)
+    const supabase = getSupabaseAdmin();
+
+    // Autenticar via Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError || !authData.session) {
+      return NextResponse.json(
+        { error: 'Credenciais inválidas' },
+        { status: 401 }
+      );
+    }
+
+    const userId = authData.user.id;
+
+    // Buscar profile para verificar role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, onboarding_completed, created_at')
+      .eq('id', userId)
       .single();
 
-    if (userError || !companyUser) {
+    if (profileError || !profile) {
       return NextResponse.json(
-        { error: 'Credenciais inválidas' },
-        { status: 401 }
+        { error: 'Perfil não encontrado' },
+        { status: 404 }
       );
     }
 
-    // Verificar senha
-    const isValidPassword = await bcrypt.compare(password, companyUser.password_hash);
-
-    if (!isValidPassword) {
+    if (profile.role !== 'company_owner') {
       return NextResponse.json(
-        { error: 'Credenciais inválidas' },
-        { status: 401 }
+        { error: 'Este login é exclusivo para lojistas' },
+        { status: 403 }
       );
     }
 
-    // Buscar dados da empresa
+    // Buscar empresa vinculada
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select(`
@@ -71,9 +67,12 @@ export async function POST(request: NextRequest) {
         has_expiration,
         expiration_days,
         category_id,
-        created_at
+        created_at,
+        address,
+        latitude,
+        longitude
       `)
-      .eq('id', companyUser.company_id)
+      .eq('owner_id', userId)
       .single();
 
     if (companyError || !company) {
@@ -114,27 +113,17 @@ export async function POST(request: NextRequest) {
       ? reviewsData!.reduce((sum, r) => sum + (r.rating || 0), 0) / totalReviews
       : 0;
 
-    // Gerar token simples (em produção, usar JWT)
-    const sessionToken = Buffer.from(
-      JSON.stringify({
-        userId: companyUser.id,
-        companyId: companyUser.company_id,
-        exp: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 dias
-      })
-    ).toString('base64');
-
-    // Retornar dados do usuário e empresa (sem o password_hash)
     return NextResponse.json({
       success: true,
-      token: sessionToken,
+      token: authData.session.access_token,
+      refresh_token: authData.session.refresh_token,
       user: {
-        id: companyUser.id,
-        name: companyUser.name,
-        email: companyUser.email,
-        company_id: companyUser.company_id,
-        onboarding_completed: companyUser.onboarding_completed || false,
-        created_at: companyUser.created_at,
-        updated_at: companyUser.updated_at,
+        id: profile.id,
+        name: profile.full_name,
+        email: authData.user.email,
+        company_id: company.id,
+        onboarding_completed: profile.onboarding_completed || false,
+        created_at: profile.created_at,
       },
       company: {
         id: company.id,
@@ -154,6 +143,9 @@ export async function POST(request: NextRequest) {
         rating: Math.round(avgRating * 10) / 10,
         total_reviews: totalReviews,
         created_at: company.created_at,
+        address: company.address || null,
+        latitude: company.latitude || null,
+        longitude: company.longitude || null,
       },
     });
   } catch (error) {

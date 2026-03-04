@@ -1,48 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validateAuth, AuthError } from '@/lib/auth-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    const auth = await validateAuth(request);
+    if (auth instanceof AuthError) return auth.toResponse();
 
-    const token = authHeader.replace('Bearer ', '');
-
-    let tokenData: { userId: string; companyId: string; exp: number };
-    try {
-      tokenData = JSON.parse(Buffer.from(token, 'base64').toString());
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
-    }
-
-    if (tokenData.exp < Date.now()) {
-      return NextResponse.json({ error: 'Token expirado' }, { status: 401 });
-    }
-
+    const { userId, companyId } = auth;
     const supabase = getSupabaseAdmin();
 
-    const { data: user, error } = await supabase
-      .from('company_users')
-      .select('id, name, email, company_id, onboarding_completed, created_at, updated_at')
-      .eq('id', tokenData.userId)
-      .eq('is_active', true)
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, onboarding_completed, created_at')
+      .eq('id', userId)
       .single();
 
-    if (error || !user) {
+    if (error || !profile) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
+    // Buscar email do auth.users
+    const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
+
     return NextResponse.json({
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        company_id: user.company_id,
-        onboarding_completed: user.onboarding_completed || false,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
+        id: profile.id,
+        name: profile.full_name,
+        email: authUser?.email || '',
+        company_id: companyId,
+        onboarding_completed: profile.onboarding_completed || false,
+        created_at: profile.created_at,
       },
     });
   } catch (error) {

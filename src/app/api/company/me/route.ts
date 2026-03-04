@@ -1,27 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { validateAuth, AuthError } from '@/lib/auth-helpers';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(request: NextRequest) {
     try {
-        const authHeader = request.headers.get('Authorization');
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-        }
+        const auth = await validateAuth(request);
+        if (auth instanceof AuthError) return auth.toResponse();
 
-        const token = authHeader.split(' ')[1];
-        let companyId: string;
-
-        try {
-            const tokenData = JSON.parse(atob(token));
-            companyId = tokenData.companyId;
-        } catch {
-            return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
-        }
+        const { companyId } = auth;
+        const supabase = getSupabaseAdmin();
 
         const { data: company, error: companyError } = await supabase
             .from('companies')

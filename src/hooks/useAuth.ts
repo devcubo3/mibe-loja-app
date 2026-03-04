@@ -22,6 +22,7 @@ export const useAuth = create<AuthStore>()(
       user: null,
       company: null,
       token: null,
+      refresh_token: null,
       isLoading: true,
       isAuthenticated: false,
       _hasHydrated: false,
@@ -57,6 +58,7 @@ export const useAuth = create<AuthStore>()(
             user: loginData.user,
             company: loginData.company,
             token: loginData.token,
+            refresh_token: loginData.refresh_token,
             isAuthenticated: true,
             isLoading: false,
           });
@@ -76,6 +78,7 @@ export const useAuth = create<AuthStore>()(
           user: null,
           company: null,
           token: null,
+          refresh_token: null,
           isAuthenticated: false,
           isLoading: false,
         });
@@ -88,45 +91,31 @@ export const useAuth = create<AuthStore>()(
           return;
         }
 
-        // Verificar se o token ainda é válido
+        // Validar token via /api/auth/me (JWT do Supabase)
         try {
-          const tokenData = JSON.parse(atob(currentState.token));
-          if (tokenData.exp < Date.now()) {
-            // Token expirado
+          const response = await fetch('/api/auth/me', {
+            headers: { Authorization: `Bearer ${currentState.token}` },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            set({ user: data.user, isLoading: false });
+          } else if (response.status === 401) {
+            // Token expirado ou inválido — deslogar
             set({
               user: null,
               company: null,
               token: null,
+              refresh_token: null,
               isAuthenticated: false,
               isLoading: false,
             });
-            return;
-          }
-
-          // Token válido — buscar dados atualizados do servidor
-          try {
-            const response = await fetch('/api/auth/me', {
-              headers: { Authorization: `Bearer ${currentState.token}` },
-            });
-            if (response.ok) {
-              const data = await response.json();
-              set({ user: data.user, isLoading: false });
-            } else {
-              set({ isLoading: false });
-            }
-          } catch {
-            // Sem conexão, usar dados do cache
+          } else {
             set({ isLoading: false });
           }
         } catch {
-          // Token inválido
-          set({
-            user: null,
-            company: null,
-            token: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+          // Sem conexão, usar dados do cache
+          set({ isLoading: false });
         }
       },
 
@@ -174,6 +163,7 @@ export const useAuth = create<AuthStore>()(
         user: state.user,
         company: state.company,
         token: state.token,
+        refresh_token: state.refresh_token,
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {

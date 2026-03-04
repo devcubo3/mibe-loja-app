@@ -30,18 +30,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { email, type = "company_user" } = await req.json();
+    const { email } = await req.json();
 
     if (!email) {
       return new Response(
         JSON.stringify({ error: "E-mail é obrigatório" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (type !== "company_user" && type !== "profile") {
-      return new Response(
-        JSON.stringify({ error: "Tipo de usuário inválido" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -55,28 +48,15 @@ Deno.serve(async (req) => {
     let userId: string | null = null;
     let userEmail = normalizedEmail;
 
-    if (type === "company_user") {
-      const { data: user } = await supabase
-        .from("company_users")
-        .select("id, email")
-        .eq("email", normalizedEmail)
-        .eq("is_active", true)
-        .single();
+    // Todos os usuários agora estão em auth.users (unificado)
+    const { data: { users } } = await supabase.auth.admin.listUsers();
+    const authUser = users?.find(
+      (u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail
+    );
 
-      if (user) {
-        userId = user.id;
-        userEmail = user.email;
-      }
-    } else {
-      const { data: { users } } = await supabase.auth.admin.listUsers();
-      const authUser = users?.find(
-        (u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail
-      );
-
-      if (authUser) {
-        userId = authUser.id;
-        userEmail = authUser.email || normalizedEmail;
-      }
+    if (authUser) {
+      userId = authUser.id;
+      userEmail = authUser.email || normalizedEmail;
     }
 
     // Sempre retorna sucesso (não revela se email existe)
@@ -92,7 +72,6 @@ Deno.serve(async (req) => {
       .from("password_reset_tokens")
       .update({ used_at: new Date().toISOString() })
       .eq("user_id", userId)
-      .eq("user_type", type)
       .is("used_at", null);
 
     // Gerar token seguro
@@ -104,7 +83,7 @@ Deno.serve(async (req) => {
       .from("password_reset_tokens")
       .insert({
         user_id: userId,
-        user_type: type,
+        user_type: "profile",
         token_hash: tokenHash,
         expires_at: expiresAt,
       });
@@ -118,10 +97,9 @@ Deno.serve(async (req) => {
     }
 
     const baseUrl = Deno.env.get("APP_URL") || "https://mibeloja.devaocubo.com.br";
-    const resetLink = `${baseUrl}/redefinir-senha?token=${token}&type=${type}`;
+    const resetLink = `${baseUrl}/redefinir-senha?token=${token}&type=profile`;
 
     console.log("========================================");
-    console.log(`[RESET] Tipo: ${type}`);
     console.log(`[RESET] Solicitação de reset para: ${userEmail}`);
     console.log(`[RESET] Link: ${resetLink}`);
     console.log("========================================");

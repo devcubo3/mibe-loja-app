@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validateAuth, AuthError } from '@/lib/auth-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { createCustomer } from '@/lib/asaas';
 
@@ -10,24 +11,10 @@ import { createCustomer } from '@/lib/asaas';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Validar token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    const auth = await validateAuth(request);
+    if (auth instanceof AuthError) return auth.toResponse();
 
-    const token = authHeader.split(' ')[1];
-    let companyId: string;
-
-    try {
-      const tokenData = JSON.parse(atob(token));
-      if (tokenData.exp < Date.now()) {
-        return NextResponse.json({ error: 'Sessão expirada' }, { status: 401 });
-      }
-      companyId = tokenData.companyId;
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
-    }
+    const { companyId } = auth;
 
     // Parse body
     const body = await request.json();

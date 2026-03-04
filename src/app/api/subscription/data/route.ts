@@ -1,39 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validateAuth, AuthError } from '@/lib/auth-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await validateAuth(request);
+    if (auth instanceof AuthError) return auth.toResponse();
+
+    const { companyId } = auth;
     const supabaseAdmin = getSupabaseAdmin();
-
-    // Validar token
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const token = authHeader.split(' ')[1];
-    let companyId: string;
-
-    try {
-      const tokenData = JSON.parse(atob(token));
-      if (tokenData.exp < Date.now()) {
-        return NextResponse.json({ error: 'Sessão expirada' }, { status: 401 });
-      }
-      companyId = tokenData.companyId;
-    } catch {
-      return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
-    }
 
     // Buscar tudo em paralelo
     const [plansResult, subscriptionResult] = await Promise.all([
-      // Todos os planos ativos
       supabaseAdmin
         .from('plans')
         .select('*')
         .eq('is_active', true)
         .order('monthly_price', { ascending: true }),
 
-      // Assinatura da empresa com dados do plano
       supabaseAdmin
         .from('subscriptions')
         .select('*, plans(*)')

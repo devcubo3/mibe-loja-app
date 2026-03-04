@@ -1,12 +1,12 @@
-// Usuário do estabelecimento (company_users)
+// Usuário do estabelecimento (via profiles com role = company_owner)
 export interface CompanyUser {
   id: string;
   name: string;
   email: string;
   company_id: string;
+  role?: string;
   onboarding_completed?: boolean;
   created_at: string | null;
-  updated_at: string | null;
 }
 
 // Dados da empresa para o contexto de auth
@@ -37,6 +37,7 @@ export interface AuthState {
   user: CompanyUser | null;
   company: CompanyData | null;
   token: string | null;
+  refresh_token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 }
@@ -49,6 +50,7 @@ export interface LoginCredentials {
 export interface LoginResponse {
   success: boolean;
   token: string;
+  refresh_token: string;
   user: CompanyUser;
   company: CompanyData;
 }
