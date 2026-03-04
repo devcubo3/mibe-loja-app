@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const baseUrl = Deno.env.get("APP_URL") || "https://mibeloja.devaocubo.com.br";
+    const baseUrl = Deno.env.get("APP_URL") || "https://app.mibeapp.com.br";
     const resetLink = `${baseUrl}/redefinir-senha?token=${token}&type=profile`;
 
     console.log("========================================");
