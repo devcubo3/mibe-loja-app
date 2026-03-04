@@ -15,7 +15,8 @@ export function formatCurrency(value: number): string {
  * @param cpf - CPF com ou sem formatação
  * @returns String formatada (ex: "123.456.789-00")
  */
-export function formatCPF(cpf: string): string {
+export function formatCPF(cpf: string | null | undefined): string {
+  if (!cpf) return '';
   const cleaned = cpf.replace(/\D/g, '');
   const match = cleaned.match(/^(\d{3})(\d{3})(\d{3})(\d{2})$/);
   if (match) {

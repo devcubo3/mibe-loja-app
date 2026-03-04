@@ -210,50 +210,7 @@ export type Database = {
           },
         ]
       }
-      company_users: {
-        Row: {
-          company_id: string
-          created_at: string | null
-          email: string
-          id: string
-          is_active: boolean | null
-          name: string
-          onboarding_completed: boolean | null
-          password_hash: string
-          updated_at: string | null
-        }
-        Insert: {
-          company_id: string
-          created_at?: string | null
-          email: string
-          id?: string
-          is_active?: boolean | null
-          name: string
-          onboarding_completed?: boolean | null
-          password_hash: string
-          updated_at?: string | null
-        }
-        Update: {
-          company_id?: string
-          created_at?: string | null
-          email?: string
-          id?: string
-          is_active?: boolean | null
-          name?: string
-          onboarding_completed?: boolean | null
-          password_hash?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_users_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+
       password_reset_tokens: {
         Row: {
           id: string
@@ -371,30 +328,33 @@ export type Database = {
         Row: {
           avatar_url: string | null
           birth_date: string | null
-          cpf: string
+          cpf: string | null
           created_at: string | null
           full_name: string
           id: string
+          onboarding_completed: boolean | null
           phone: string | null
           role: Database["public"]["Enums"]["user_role"] | null
         }
         Insert: {
           avatar_url?: string | null
           birth_date?: string | null
-          cpf: string
+          cpf?: string | null
           created_at?: string | null
           full_name: string
           id: string
+          onboarding_completed?: boolean | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
         }
         Update: {
           avatar_url?: string | null
           birth_date?: string | null
-          cpf?: string
+          cpf?: string | null
           created_at?: string | null
           full_name?: string
           id?: string
+          onboarding_completed?: boolean | null
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
         }
@@ -576,7 +536,7 @@ export type Enums<T extends keyof Database['public']['Enums']> = Database['publi
 
 // Aliases para tabelas mais usadas
 export type Company = Tables<'companies'>
-export type CompanyUser = Tables<'company_users'>
+// company_users removida — lojistas agora usam auth.users + profiles
 export type Profile = Tables<'profiles'>
 export type Transaction = Tables<'transactions'>
 export type CashbackBalance = Tables<'cashback_balances'>

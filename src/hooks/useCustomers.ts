@@ -127,7 +127,7 @@ export function useCustomers() {
           formattedCustomers = formattedCustomers.filter(
             customer =>
               customer.full_name.toLowerCase().includes(searchLower) ||
-              customer.cpf.replace(/[.-]/g, '').includes(searchLower) ||
+              customer.cpf?.replace(/[.-]/g, '').includes(searchLower) ||
               customer.phone?.replace(/[()-\s]/g, '').includes(searchLower)
           );
         }

@@ -2,7 +2,7 @@
 export interface Customer {
   id: string;
   full_name: string;
-  cpf: string;
+  cpf: string | null;
   phone: string | null;
   birth_date: string | null;
   created_at: string | null;
