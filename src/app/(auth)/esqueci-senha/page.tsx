@@ -36,17 +36,12 @@ function ForgotPasswordContent() {
     setError(null);
 
     try {
-      const { data: result, error: fnError } = await supabase.functions.invoke('forgot-password', {
-        body: { email: data.email },
+      const { error: fnError } = await supabase.auth.resetPasswordForEmail(data.email, {
+        redirectTo: `${window.location.origin}/redefinir-senha`,
       });
 
       if (fnError) {
-        setError('Erro ao enviar e-mail');
-        return;
-      }
-
-      if (result?.error) {
-        setError(result.error);
+        setError(fnError.message || 'Erro ao enviar e-mail');
         return;
       }
 

@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Button, Input } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
@@ -24,9 +23,6 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 function ResetPasswordContent() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,17 +40,12 @@ function ResetPasswordContent() {
     setError(null);
 
     try {
-      const { data: result, error: fnError } = await supabase.functions.invoke('reset-password', {
-        body: { token, new_password: data.new_password },
+      const { error: fnError } = await supabase.auth.updateUser({
+        password: data.new_password
       });
 
       if (fnError) {
-        setError('Erro ao redefinir senha');
-        return;
-      }
-
-      if (result?.error) {
-        setError(result.error);
+        setError(fnError.message || 'Erro ao redefinir senha');
         return;
       }
 
@@ -66,27 +57,7 @@ function ResetPasswordContent() {
     }
   };
 
-  // Sem token na URL — acesso inválido
-  if (!token) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-lg">
-        <div className="w-full max-w-sm text-center">
-          <div className="w-16 h-16 bg-error-light rounded-full flex items-center justify-center mx-auto mb-lg">
-            <AlertCircle className="w-8 h-8 text-error" />
-          </div>
-          <h1 className="text-title font-bold mb-sm">Link inválido</h1>
-          <p className="text-body text-text-secondary mb-xl">
-            Este link de redefinição de senha é inválido ou expirou. Solicite um novo link.
-          </p>
-          <Link href="/esqueci-senha">
-            <Button fullWidth variant="secondary">
-              Solicitar novo link
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+
 
   // Sucesso
   if (isSuccess) {
