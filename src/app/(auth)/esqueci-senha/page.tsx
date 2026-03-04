@@ -9,7 +9,6 @@ import { z } from 'zod';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Button, Input } from '@/components/ui';
-import { supabase } from '@/lib/supabase';
 
 const schema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -36,12 +35,19 @@ function ForgotPasswordContent() {
     setError(null);
 
     try {
-      const { error: fnError } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/redefinir-senha`,
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email,
+          redirectTo: `${window.location.origin}/redefinir-senha`,
+        }),
       });
 
-      if (fnError) {
-        setError(fnError.message || 'Erro ao enviar e-mail');
+      const result = await res.json();
+
+      if (!res.ok) {
+        setError(result.error || 'Erro ao enviar e-mail');
         return;
       }
 
