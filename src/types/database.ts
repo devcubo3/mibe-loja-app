@@ -515,6 +515,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_email_exists: { Args: { email_input: string }; Returns: boolean }
       expire_old_cashback: { Args: Record<string, never>; Returns: undefined }
       is_super_admin: { Args: Record<string, never>; Returns: boolean }
     }
