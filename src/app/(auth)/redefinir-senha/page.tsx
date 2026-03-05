@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,12 +23,9 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 function ResetPasswordContent() {
-  const searchParams = useSearchParams();
-  const source = searchParams.get('source');
-  const isFromApp = source === 'app';
-
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -39,6 +35,45 @@ function ResetPasswordContent() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  // Detectar se o usuário é cliente verificando o role no profiles
+  useEffect(() => {
+    const checkUserRole = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile?.role === 'client') {
+          setIsClient(true);
+        }
+      }
+    };
+
+    checkUserRole();
+
+    // Também ouvir mudanças de auth (quando o token de recovery é processado)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'PASSWORD_RECOVERY' && session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile?.role === 'client') {
+            setIsClient(true);
+          }
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
@@ -62,12 +97,10 @@ function ResetPasswordContent() {
     }
   };
 
-
-
   // Sucesso
   if (isSuccess) {
-    if (isFromApp) {
-      // Usuário veio do app React Native (cliente)
+    if (isClient) {
+      // Usuário é cliente (veio do app React Native)
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-lg">
           <div className="w-full max-w-sm text-center">
@@ -89,7 +122,7 @@ function ResetPasswordContent() {
       );
     }
 
-    // Usuário veio da web (lojista)
+    // Usuário é lojista (veio da web)
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-lg">
         <div className="w-full max-w-sm text-center">
