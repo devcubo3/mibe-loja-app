@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     }
 
     const baseUrl = Deno.env.get("APP_URL") || "https://app.mibeapp.com.br";
-    const resetLink = `${baseUrl}/redefinir-senha?token=${token}&type=profile`;
+    const resetLink = `${baseUrl}/redefinir-senha?token=${token}&type=profile&source=app`;
 
     console.log("========================================");
     console.log(`[RESET] Solicitação de reset para: ${userEmail}`);

@@ -2,10 +2,11 @@
 
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Smartphone } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Button, Input } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
@@ -23,6 +24,10 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 function ResetPasswordContent() {
+  const searchParams = useSearchParams();
+  const source = searchParams.get('source');
+  const isFromApp = source === 'app';
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +66,30 @@ function ResetPasswordContent() {
 
   // Sucesso
   if (isSuccess) {
+    if (isFromApp) {
+      // Usuário veio do app React Native (cliente)
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center p-lg">
+          <div className="w-full max-w-sm text-center">
+            <div className="w-16 h-16 bg-success-light rounded-full flex items-center justify-center mx-auto mb-lg">
+              <CheckCircle className="w-8 h-8 text-success" />
+            </div>
+            <h1 className="text-title font-bold mb-sm">Senha redefinida!</h1>
+            <p className="text-body text-text-secondary mb-lg">
+              Sua senha foi alterada com sucesso.
+            </p>
+            <div className="bg-surface border border-border rounded-md p-lg flex items-center gap-md">
+              <Smartphone className="w-6 h-6 text-primary flex-shrink-0" />
+              <p className="text-body text-text-secondary text-left">
+                Volte ao aplicativo e faça login com sua nova senha.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Usuário veio da web (lojista)
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-lg">
         <div className="w-full max-w-sm text-center">
