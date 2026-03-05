@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, CheckCircle, Smartphone } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Button, Input } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
@@ -25,7 +25,6 @@ type FormData = z.infer<typeof schema>;
 function ResetPasswordContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -35,45 +34,6 @@ function ResetPasswordContent() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
-
-  // Detectar se o usuário é cliente verificando o role no profiles
-  useEffect(() => {
-    const checkUserRole = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile?.role === 'client') {
-          setIsClient(true);
-        }
-      }
-    };
-
-    checkUserRole();
-
-    // Também ouvir mudanças de auth (quando o token de recovery é processado)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'PASSWORD_RECOVERY' && session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profile?.role === 'client') {
-            setIsClient(true);
-          }
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
@@ -99,30 +59,6 @@ function ResetPasswordContent() {
 
   // Sucesso
   if (isSuccess) {
-    if (isClient) {
-      // Usuário é cliente (veio do app React Native)
-      return (
-        <div className="flex-1 flex flex-col items-center justify-center p-lg">
-          <div className="w-full max-w-sm text-center">
-            <div className="w-16 h-16 bg-success-light rounded-full flex items-center justify-center mx-auto mb-lg">
-              <CheckCircle className="w-8 h-8 text-success" />
-            </div>
-            <h1 className="text-title font-bold mb-sm">Senha redefinida!</h1>
-            <p className="text-body text-text-secondary mb-lg">
-              Sua senha foi alterada com sucesso.
-            </p>
-            <div className="bg-surface border border-border rounded-md p-lg flex items-center gap-md">
-              <Smartphone className="w-6 h-6 text-primary flex-shrink-0" />
-              <p className="text-body text-text-secondary text-left">
-                Volte ao aplicativo e faça login com sua nova senha.
-              </p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Usuário é lojista (veio da web)
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-lg">
         <div className="w-full max-w-sm text-center">
@@ -130,14 +66,12 @@ function ResetPasswordContent() {
             <CheckCircle className="w-8 h-8 text-success" />
           </div>
           <h1 className="text-title font-bold mb-sm">Senha redefinida!</h1>
-          <p className="text-body text-text-secondary mb-xl">
-            Sua senha foi alterada com sucesso. Agora você pode fazer login com a nova senha.
+          <p className="text-body text-text-secondary mb-lg">
+            Sua senha foi alterada com sucesso.
           </p>
-          <Link href="/login">
-            <Button fullWidth>
-              Ir para o login
-            </Button>
-          </Link>
+          <p className="text-body font-semibold text-text-primary">
+            Volte à tela de login e entre com sua nova senha.
+          </p>
         </div>
       </div>
     );
