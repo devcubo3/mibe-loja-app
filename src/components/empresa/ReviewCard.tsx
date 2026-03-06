@@ -58,13 +58,13 @@ export function ReviewCard({ review, onReply }: ReviewCardProps) {
       </div>
 
       {/* Comentário */}
-      <p className="mt-md text-body text-text-secondary leading-relaxed">
+      <div className="mt-md text-body text-text-secondary leading-relaxed break-words whitespace-pre-wrap">
         "{review.comment}"
-      </p>
+      </div>
 
       {/* Resposta da empresa */}
-      {review.reply && (
-        <div className="mt-md pt-md border-t border-input-border">
+      {review.owner_response && (
+        <div className="mt-md pt-md border-t border-input-border pl-4 border-l-4 border-l-primary/20">
           <div className="flex items-center gap-sm mb-sm">
             <Reply className="w-4 h-4 text-text-muted" />
             <span className="text-caption font-medium text-text-muted">
@@ -72,13 +72,13 @@ export function ReviewCard({ review, onReply }: ReviewCardProps) {
             </span>
           </div>
           <p className="text-body text-text-secondary italic">
-            "{review.reply.text}"
+            "{review.owner_response}"
           </p>
         </div>
       )}
 
       {/* Botão/Form de resposta */}
-      {!review.reply && (
+      {!review.owner_response && (
         <div className="mt-md pt-md border-t border-input-border">
           {isReplying ? (
             <div className="space-y-sm">
@@ -116,7 +116,7 @@ export function ReviewCard({ review, onReply }: ReviewCardProps) {
             <button
               type="button"
               onClick={() => setIsReplying(true)}
-              className="flex items-center gap-sm text-primary hover:underline"
+              className="flex items-center gap-sm text-text-muted hover:text-primary transition-colors"
             >
               <Reply className="w-4 h-4" />
               <span className="text-sm font-medium">Responder</span>

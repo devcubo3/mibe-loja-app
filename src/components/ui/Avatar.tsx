@@ -16,7 +16,7 @@ const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
       xl: 'w-20 h-20 text-title',
     };
 
-    const initial = name
+    const initial = (name || 'Usuario Anônimo')
       .split(' ')
       .map((n) => n[0])
       .slice(0, 2)

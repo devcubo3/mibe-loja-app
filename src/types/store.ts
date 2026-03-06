@@ -52,11 +52,8 @@ export interface Review {
   customer_avatar_url?: string | null;
   rating: number;
   comment: string;
+  owner_response?: string | null;
   created_at: string;
-  reply?: {
-    text: string;
-    created_at: string;
-  };
 }
 
 export const STORE_CATEGORIES = [

@@ -1,13 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Lock,
-  ChevronRight,
-  Pencil,
-  MapPin,
-} from 'lucide-react';
+import { Lock, ChevronRight, Pencil, MapPin } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, Button, Badge, Avatar } from '@/components/ui';
 import {
@@ -22,43 +17,7 @@ import {
 import { formatCNPJ, formatCurrency } from '@/lib/formatters';
 import type { StoreUpdateData, Review } from '@/types/store';
 import { storeService } from '@/services/storeService';
-
-// Dados mock de avaliações para demonstração
-const MOCK_REVIEWS: Review[] = [
-  {
-    id: '1',
-    store_id: '1',
-    customer_id: '1',
-    customer_name: 'Maria Silva',
-    rating: 5,
-    comment:
-      'Excelente restaurante! A comida é maravilhosa e o atendimento impecável. Voltarei mais vezes!',
-    created_at: '2026-01-15T10:00:00Z',
-    reply: {
-      text: 'Obrigado pelo carinho, Maria! Esperamos você novamente em breve.',
-      created_at: '2026-01-15T14:00:00Z',
-    },
-  },
-  {
-    id: '2',
-    store_id: '1',
-    customer_id: '2',
-    customer_name: 'João Santos',
-    rating: 4,
-    comment:
-      'Boa comida e ambiente agradável. O único ponto a melhorar seria o tempo de espera.',
-    created_at: '2026-01-10T15:30:00Z',
-  },
-  {
-    id: '3',
-    store_id: '1',
-    customer_id: '3',
-    customer_name: 'Ana Oliveira',
-    rating: 5,
-    comment: 'Melhor experiência gastronômica que tive! Recomendo demais.',
-    created_at: '2026-01-08T19:00:00Z',
-  },
-];
+import { Loader2 } from 'lucide-react';
 
 export default function EmpresaPage() {
   const router = useRouter();
@@ -66,7 +25,33 @@ export default function EmpresaPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [photos, setPhotos] = useState<string[]>(company?.photos || []);
-  const [reviews] = useState<Review[]>(MOCK_REVIEWS);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+
+  useEffect(() => {
+    async function loadReviews() {
+      if (!company?.id) return;
+      try {
+        setIsLoadingReviews(true);
+        const token = storeService.getAuthToken();
+        const res = await fetch('/api/reviews', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const { data } = await res.json();
+          setReviews(data || []);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar avaliações:', error);
+      } finally {
+        setIsLoadingReviews(false);
+      }
+    }
+
+    loadReviews();
+  }, [company?.id]);
 
   if (!company) {
     return (
@@ -121,8 +106,30 @@ export default function EmpresaPage() {
   };
 
   const handleReplyReview = async (reviewId: string, text: string) => {
-    console.log('Resposta enviada:', { reviewId, text });
-    // Aqui seria a chamada para API
+    try {
+      const token = storeService.getAuthToken();
+      const res = await fetch('/api/reviews/reply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ reviewId, text })
+      });
+
+      if (!res.ok) {
+        throw new Error('Erro ao salvar resposta');
+      }
+
+      const result = await res.json();
+      if (result.success) {
+        // Atualiza o estado local para mostrar a resposta imediatamente
+        setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, owner_response: text } : r));
+      }
+    } catch (error) {
+      console.error('Erro ao responder avaliação:', error);
+      throw error;
+    }
   };
 
   return (
@@ -320,13 +327,23 @@ export default function EmpresaPage() {
             </button>
           </div>
           <div className="space-y-md">
-            {reviews.slice(0, 3).map((review) => (
-              <ReviewCard
-                key={review.id}
-                review={review}
-                onReply={handleReplyReview}
-              />
-            ))}
+            {isLoadingReviews ? (
+              <div className="flex justify-center p-md">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : reviews.length === 0 ? (
+              <p className="text-center text-text-muted mt-md p-md bg-input-bg rounded-lg">
+                Sua empresa ainda não possui avaliações.
+              </p>
+            ) : (
+              reviews.slice(0, 5).map((review) => (
+                <ReviewCard
+                  key={review.id}
+                  review={review}
+                  onReply={handleReplyReview}
+                />
+              ))
+            )}
           </div>
         </section>
 
