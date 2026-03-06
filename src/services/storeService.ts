@@ -51,7 +51,7 @@ export const storeService = {
     /**
      * Upload de arquivo para o storage via API Route
      */
-    async uploadAsset(file: File, type: 'logo' | 'cover' | 'gallery') {
+    async uploadAsset(file: File, type: 'logo' | 'cover' | 'gallery', skipUpdateStore: boolean = false) {
         const token = this.getAuthToken();
         if (!token) throw new Error('Não autenticado');
 
@@ -73,9 +73,11 @@ export const storeService = {
 
         const publicUrl = result.publicUrl;
 
-        // Salva a nova URL no banco
-        const updateData = type === 'logo' ? { logo_url: publicUrl } : { cover_image: publicUrl };
-        await this.updateStore(updateData);
+        // Salva a nova URL no banco apenas se não for pular
+        if (!skipUpdateStore) {
+            const updateData = type === 'logo' ? { logo_url: publicUrl } : { cover_image: publicUrl };
+            await this.updateStore(updateData);
+        }
 
         return publicUrl;
     }

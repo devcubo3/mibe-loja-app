@@ -2,12 +2,14 @@
 
 import { useState, useRef } from 'react';
 import { Plus, Trash2, Loader2, X, Eye } from 'lucide-react';
-import { Modal } from '@/components/ui';
+import { Modal, Button } from '@/components/ui';
 
 interface PhotoGalleryProps {
   photos: string[];
-  onAdd: (url: string) => void;
+  onAdd: (file: File) => Promise<void> | void;
   onRemove: (index: number) => void;
+  onSave?: () => void;
+  isSaving?: boolean;
   maxPhotos?: number;
 }
 
@@ -15,6 +17,8 @@ export function PhotoGallery({
   photos,
   onAdd,
   onRemove,
+  onSave,
+  isSaving = false,
   maxPhotos = 10,
 }: PhotoGalleryProps) {
   const [isUploading, setIsUploading] = useState(false);
@@ -30,7 +34,7 @@ export function PhotoGallery({
     inputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -47,20 +51,15 @@ export function PhotoGallery({
     setIsUploading(true);
     setError(null);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const url = event.target?.result as string;
-      onAdd(url);
-      setIsUploading(false);
-    };
-    reader.onerror = () => {
+    try {
+      await onAdd(file);
+    } catch (err) {
       setError('Erro ao carregar imagem');
+    } finally {
       setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
-
-    // Reset input
-    e.target.value = '';
+      // Reset input
+      e.target.value = '';
+    }
   };
 
   return (
@@ -68,19 +67,33 @@ export function PhotoGallery({
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="section-title">Galeria de Fotos</h2>
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={isUploading || photos.length >= maxPhotos}
-          className="flex items-center gap-1 text-primary hover:underline disabled:opacity-50 disabled:no-underline"
-        >
-          {isUploading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Plus className="w-4 h-4" />
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={handleClick}
+            disabled={isUploading || photos.length >= maxPhotos}
+            className="flex items-center gap-1 text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+          >
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            <span className="text-sm font-medium">Adicionar</span>
+          </button>
+
+          {onSave && (
+            <Button
+              type="button"
+              onClick={onSave}
+              disabled={isSaving || isUploading}
+              loading={isSaving}
+              size="sm"
+            >
+              Salvar
+            </Button>
           )}
-          <span className="text-sm font-medium">Adicionar</span>
-        </button>
+        </div>
       </div>
 
       {/* Erro */}

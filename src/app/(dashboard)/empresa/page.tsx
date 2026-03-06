@@ -27,6 +27,7 @@ export default function EmpresaPage() {
   const [photos, setPhotos] = useState<string[]>(company?.photos || []);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+  const [isSavingGallery, setIsSavingGallery] = useState(false);
 
   useEffect(() => {
     async function loadReviews() {
@@ -98,12 +99,30 @@ export default function EmpresaPage() {
     }
   };
 
-  const handleAddPhoto = (url: string) => {
-    setPhotos((prev) => [...prev, url]);
+  const handleAddPhoto = async (file: File) => {
+    try {
+      const url = await storeService.uploadAsset(file, 'gallery', true);
+      setPhotos((prev) => [...prev, url]);
+    } catch (error) {
+      console.error('Erro ao subir foto:', error);
+      throw error;
+    }
   };
 
   const handleRemovePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSaveGallery = async () => {
+    try {
+      setIsSavingGallery(true);
+      await storeService.updateStore({ photos });
+      await loadCompany();
+    } catch (error) {
+      console.error('Erro ao salvar galeria:', error);
+    } finally {
+      setIsSavingGallery(false);
+    }
   };
 
   const handleReplyReview = async (reviewId: string, text: string) => {
@@ -313,6 +332,8 @@ export default function EmpresaPage() {
             photos={photos}
             onAdd={handleAddPhoto}
             onRemove={handleRemovePhoto}
+            onSave={handleSaveGallery}
+            isSaving={isSavingGallery}
           />
         </section>
 
