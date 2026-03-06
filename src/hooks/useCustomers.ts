@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase'; // Used in other places possibly
 import { useAuth } from './useAuth';
+import { storeService } from '@/services/storeService';
 import type { CustomerWithBalance, CustomersFilters } from '@/types/customer';
 
 type SortOption = CustomersFilters['sortBy'];
@@ -32,72 +33,24 @@ export function useCustomers() {
       }
 
       try {
-        // Buscar saldos de cashback da empresa com dados do cliente
-        let query = supabase
-          .from('cashback_balances')
-          .select(`
-            id,
-            user_id,
-            company_id,
-            current_balance,
-            last_purchase_date,
-            profiles:user_id (
-              id,
-              full_name,
-              cpf,
-              phone,
-              birth_date,
-              created_at,
-              avatar_url
-            )
-          `, { count: 'exact' })
-          .eq('company_id', company.id);
+        const token = storeService.getAuthToken();
+        if (!token) throw new Error('Não autenticado');
 
-        // Ordenação
-        switch (sortBy) {
-          case 'recent':
-            query = query.order('last_purchase_date', { ascending: false, nullsFirst: false });
-            break;
-          case 'oldest':
-            query = query.order('last_purchase_date', { ascending: true, nullsFirst: true });
-            break;
-          case 'highest_balance':
-            query = query.order('current_balance', { ascending: false });
-            break;
-          default:
-            query = query.order('last_purchase_date', { ascending: false, nullsFirst: false });
-        }
+        const queryParams = new URLSearchParams({
+          search,
+          sortBy,
+          page: page.toString()
+        });
 
-        // Paginação
-        query = query.range(page * pageSize, (page + 1) * pageSize - 1);
+        const response = await fetch(`/api/customers/list?${queryParams.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-        const { data, error: queryError, count } = await query;
+        if (!response.ok) throw new Error('Erro ao buscar clientes');
 
-        if (queryError) throw queryError;
-
-        // Buscar estatísticas de transações para cada cliente
-        const customerIds = data?.map((b: any) => b.user_id).filter(Boolean) || [];
-
-        let transactionStats: Record<string, { total_purchases: number; total_spent: number; total_cashback: number }> = {};
-
-        if (customerIds.length > 0) {
-          const { data: transactions } = await supabase
-            .from('transactions')
-            .select('user_id, total_amount, cashback_earned')
-            .eq('company_id', company.id)
-            .in('user_id', customerIds);
-
-          // Agregar estatísticas por cliente
-          transactions?.forEach((t) => {
-            if (!t.user_id) return;
-            if (!transactionStats[t.user_id]) {
-              transactionStats[t.user_id] = { total_purchases: 0, total_spent: 0, total_cashback: 0 };
-            }
-            transactionStats[t.user_id].total_purchases += 1;
-            transactionStats[t.user_id].total_spent += t.total_amount || 0;
-            transactionStats[t.user_id].total_cashback += t.cashback_earned || 0;
-          });
-        }
+        const { data, count, transactionStats } = await response.json();
 
         // Formatar clientes
         let formattedCustomers: CustomerWithBalance[] = (data || [])
@@ -165,76 +118,29 @@ export function useCustomers() {
     if (!company?.id) return null;
 
     try {
-      // Buscar saldo do cliente
-      const { data: balance, error: balanceError } = await supabase
-        .from('cashback_balances')
-        .select(`
-          id,
-          user_id,
-          company_id,
-          current_balance,
-          last_purchase_date,
-          profiles:user_id (
-            id,
-            full_name,
-            cpf,
-            phone,
-            birth_date,
-            created_at,
-            avatar_url
-          )
-        `)
-        .eq('company_id', company.id)
-        .eq('user_id', id)
-        .single();
+      const token = storeService.getAuthToken();
+      if (!token) return null;
 
-      if (balanceError || !balance || !(balance as any).profiles) {
-        // Cliente pode não ter saldo ainda, buscar só o profile
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, full_name, cpf, phone, birth_date, created_at, avatar_url')
-          .eq('id', id)
-          .single();
+      const response = await fetch(`/api/customers/detail?id=${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-        if (profileError || !profile) return null;
+      if (!response.ok) return null;
 
-        return {
-          id: profile.id,
-          full_name: profile.full_name,
-          cpf: profile.cpf,
-          phone: profile.phone,
-          birth_date: profile.birth_date,
-          created_at: profile.created_at,
-          avatar_url: profile.avatar_url,
-          storeBalance: {
-            customer_id: profile.id,
-            company_id: company.id,
-            balance: 0,
-            last_purchase_date: null,
-            total_purchases: 0,
-            total_spent: 0,
-            total_cashback: 0,
-          },
-        };
-      }
+      const { balance, profile, transactions } = await response.json();
 
-      // Buscar estatísticas de transações
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('total_amount, cashback_earned')
-        .eq('company_id', company.id)
-        .eq('user_id', id);
+      if (!profile) return null;
 
       const stats = transactions?.reduce(
-        (acc, t) => ({
+        (acc: any, t: any) => ({
           total_purchases: acc.total_purchases + 1,
           total_spent: acc.total_spent + (t.total_amount || 0),
           total_cashback: acc.total_cashback + (t.cashback_earned || 0),
         }),
         { total_purchases: 0, total_spent: 0, total_cashback: 0 }
       ) || { total_purchases: 0, total_spent: 0, total_cashback: 0 };
-
-      const profile = (balance as any).profiles;
 
       return {
         id: profile.id,
@@ -262,35 +168,26 @@ export function useCustomers() {
     if (!company?.id) return null;
 
     try {
+      const token = storeService.getAuthToken();
+      if (!token) return null;
+
       // Limpar CPF (remover pontos e traços)
       const cleanCpf = cpf.replace(/[.-]/g, '');
 
-      // Buscar profile pelo CPF
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, full_name, cpf, phone, birth_date, created_at, avatar_url')
-        .eq('cpf', cleanCpf)
-        .maybeSingle();
+      const response = await fetch(`/api/customers/find-by-cpf?cpf=${cleanCpf}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-      if (profileError || !profile) return null;
+      if (!response.ok) return null;
 
-      // Buscar saldo do cliente nesta empresa
-      const { data: balance } = await supabase
-        .from('cashback_balances')
-        .select('current_balance, last_purchase_date')
-        .eq('company_id', company.id)
-        .eq('user_id', profile.id)
-        .maybeSingle();
+      const { profile, balance, transactions } = await response.json();
 
-      // Buscar estatísticas de transações
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('total_amount, cashback_earned')
-        .eq('company_id', company.id)
-        .eq('user_id', profile.id);
+      if (!profile) return null;
 
       const stats = transactions?.reduce(
-        (acc, t) => ({
+        (acc: any, t: any) => ({
           total_purchases: acc.total_purchases + 1,
           total_spent: acc.total_spent + (t.total_amount || 0),
           total_cashback: acc.total_cashback + (t.cashback_earned || 0),

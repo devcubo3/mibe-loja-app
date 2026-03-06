@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase'; // Used in other places possibly, leaving for now, actual cleanup can happen later if needed.
 import { DashboardStats, SaleWithCustomer, Customer, CreateSaleData, SalesFilters } from '@/types/sale';
 import { useAuth } from './useAuth';
 import { storeService } from '@/services/storeService';
@@ -32,66 +32,28 @@ export function useSales() {
     setError(null);
 
     try {
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toISOString();
-      const yesterdayEnd = todayStart;
+      const token = storeService.getAuthToken();
+      if (!token) throw new Error('Não autenticado');
 
-      // Buscar vendas de hoje
-      const { data: todaySales, error: todayError } = await supabase
-        .from('transactions')
-        .select('total_amount, net_amount_paid, cashback_earned')
-        .eq('company_id', company.id)
-        .gte('created_at', todayStart);
+      const response = await fetch('/api/sales/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
-      if (todayError) throw todayError;
+      if (!response.ok) {
+        throw new Error('Erro ao buscar estatísticas');
+      }
 
-      // Buscar vendas de ontem
-      const { data: yesterdaySales, error: yesterdayError } = await supabase
-        .from('transactions')
-        .select('total_amount, net_amount_paid, cashback_earned')
-        .eq('company_id', company.id)
-        .gte('created_at', yesterdayStart)
-        .lt('created_at', yesterdayEnd);
-
-      if (yesterdayError) throw yesterdayError;
-
-      // Buscar vendas recentes com dados do cliente
-      const { data: recentTransactions, error: recentError } = await supabase
-        .from('transactions')
-        .select(`
-          id,
-          company_id,
-          user_id,
-          total_amount,
-          cashback_redeemed,
-          net_amount_paid,
-          cashback_earned,
-          admin_fee_amount,
-          created_at,
-          profiles:user_id (
-            id,
-            full_name,
-            cpf,
-            phone,
-            birth_date,
-            created_at,
-            avatar_url
-          )
-        `)
-        .eq('company_id', company.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (recentError) throw recentError;
+      const { todaySales, yesterdaySales, recentTransactions } = await response.json();
 
       // Calcular estatísticas
-      const salesToday = todaySales?.reduce((sum, s) => sum + (s.total_amount || 0), 0) || 0;
-      const salesYesterday = yesterdaySales?.reduce((sum, s) => sum + (s.total_amount || 0), 0) || 0;
-      const revenueToday = todaySales?.reduce((sum, s) => sum + (s.net_amount_paid || 0), 0) || 0;
-      const revenueYesterday = yesterdaySales?.reduce((sum, s) => sum + (s.net_amount_paid || 0), 0) || 0;
-      const cashbackToday = todaySales?.reduce((sum, s) => sum + (s.cashback_earned || 0), 0) || 0;
-      const cashbackYesterday = yesterdaySales?.reduce((sum, s) => sum + (s.cashback_earned || 0), 0) || 0;
+      const salesToday = todaySales?.reduce((sum: number, s: any) => sum + (s.total_amount || 0), 0) || 0;
+      const salesYesterday = yesterdaySales?.reduce((sum: number, s: any) => sum + (s.total_amount || 0), 0) || 0;
+      const revenueToday = todaySales?.reduce((sum: number, s: any) => sum + (s.net_amount_paid || 0), 0) || 0;
+      const revenueYesterday = yesterdaySales?.reduce((sum: number, s: any) => sum + (s.net_amount_paid || 0), 0) || 0;
+      const cashbackToday = todaySales?.reduce((sum: number, s: any) => sum + (s.cashback_earned || 0), 0) || 0;
+      const cashbackYesterday = yesterdaySales?.reduce((sum: number, s: any) => sum + (s.cashback_earned || 0), 0) || 0;
 
       // Formatar vendas recentes
       const recentSales: SaleWithCustomer[] = (recentTransactions || []).map((t: any) => ({
@@ -146,75 +108,28 @@ export function useSales() {
     }
 
     try {
-      const pageSize = 20;
-      const now = new Date();
+      const token = storeService.getAuthToken();
+      if (!token) throw new Error('Não autenticado');
 
-      // Construir query base
-      let query = supabase
-        .from('transactions')
-        .select(`
-          id,
-          company_id,
-          user_id,
-          total_amount,
-          cashback_redeemed,
-          net_amount_paid,
-          cashback_earned,
-          admin_fee_amount,
-          created_at,
-          profiles:user_id (
-            id,
-            full_name,
-            cpf,
-            phone,
-            birth_date,
-            created_at,
-            avatar_url
-          )
-        `, { count: 'exact' })
-        .eq('company_id', company.id);
+      const queryParams = new URLSearchParams({
+        search,
+        type,
+        period,
+        sortBy,
+        page: page.toString()
+      });
 
-      // Filtro de período
-      if (period === 'day') {
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-        query = query.gte('created_at', todayStart);
-      } else if (period === 'week') {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-        query = query.gte('created_at', weekAgo);
-      } else if (period === 'month') {
-        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        query = query.gte('created_at', monthAgo);
+      const response = await fetch(`/api/sales/list?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar vendas');
       }
 
-      // Filtro de tipo
-      if (type === 'with_cashback') {
-        query = query.gt('cashback_redeemed', 0);
-      } else if (type === 'without_cashback') {
-        query = query.eq('cashback_redeemed', 0);
-      }
-
-      // Ordenação
-      switch (sortBy) {
-        case 'recent':
-          query = query.order('created_at', { ascending: false });
-          break;
-        case 'oldest':
-          query = query.order('created_at', { ascending: true });
-          break;
-        case 'highest':
-          query = query.order('total_amount', { ascending: false });
-          break;
-        case 'lowest':
-          query = query.order('total_amount', { ascending: true });
-          break;
-      }
-
-      // Paginação
-      query = query.range(page * pageSize, (page + 1) * pageSize - 1);
-
-      const { data, error: queryError, count } = await query;
-
-      if (queryError) throw queryError;
+      const { data, count } = await response.json();
 
       // Formatar vendas
       let formattedSales: SaleWithCustomer[] = (data || []).map((t: any) => ({
@@ -270,33 +185,20 @@ export function useSales() {
     if (!company?.id) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`
-          id,
-          company_id,
-          user_id,
-          total_amount,
-          cashback_redeemed,
-          net_amount_paid,
-          cashback_earned,
-          admin_fee_amount,
-          created_at,
-          profiles:user_id (
-            id,
-            full_name,
-            cpf,
-            phone,
-            birth_date,
-            created_at,
-            avatar_url
-          )
-        `)
-        .eq('id', id)
-        .eq('company_id', company.id)
-        .single();
+      const token = storeService.getAuthToken();
+      if (!token) return null;
 
-      if (error || !data) return null;
+      const response = await fetch(`/api/sales/detail?id=${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) return null;
+
+      const { data } = await response.json();
+
+      if (!data) return null;
 
       return {
         id: data.id,

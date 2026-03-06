@@ -1,18 +1,16 @@
-import { supabase } from '@/lib/supabase';
 import type { StoreUpdateData } from '@/types/store';
 
 export const storeService = {
     /**
-     * Busca as categorias sincronizadas do banco
+     * Busca as categorias sincronizadas via API Route
      */
     async getCategories() {
-        const { data, error } = await supabase
-            .from('categories')
-            .select('id, name')
-            .order('name');
+        const response = await fetch('/api/categories');
+        const result = await response.json();
 
-        if (error) throw error;
-        return data;
+        if (!response.ok) throw new Error(result.error || 'Erro ao buscar categorias');
+
+        return result.data;
     },
 
     /**
@@ -51,37 +49,29 @@ export const storeService = {
     },
 
     /**
-     * Upload de arquivo para o storage
+     * Upload de arquivo para o storage via API Route
      */
     async uploadAsset(file: File, type: 'logo' | 'cover' | 'gallery') {
         const token = this.getAuthToken();
         if (!token) throw new Error('Não autenticado');
 
-        // Buscar companyId do Zustand state (não mais do token)
-        const storage = localStorage.getItem('mibe-auth-storage');
-        if (!storage) throw new Error('Não autenticado');
-        const parsed = JSON.parse(storage);
-        const companyId = parsed.state?.company?.id;
-        if (!companyId) throw new Error('Empresa não encontrada');
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', type);
 
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${companyId}/${type}_${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
 
-        // Upload direto via Supabase Client (usando políticas públicas de upload caso existam, 
-        // ou precisaremos ajustar policies)
-        const { error: uploadError } = await supabase.storage
-            .from('store-assets')
-            .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: true,
-            });
+        const result = await response.json();
 
-        if (uploadError) throw uploadError;
+        if (!response.ok) throw new Error(result.error || 'Erro no upload');
 
-        const { data: { publicUrl } } = supabase.storage
-            .from('store-assets')
-            .getPublicUrl(filePath);
+        const publicUrl = result.publicUrl;
 
         // Salva a nova URL no banco
         const updateData = type === 'logo' ? { logo_url: publicUrl } : { cover_image: publicUrl };
