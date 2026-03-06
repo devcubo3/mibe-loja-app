@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Reply, Send, Loader2 } from 'lucide-react';
+import { Reply, Send, Loader2, Pencil } from 'lucide-react';
 import { Avatar, Button } from '@/components/ui';
 import { StarRating } from './StarRating';
 import type { Review } from '@/types/store';
@@ -63,13 +63,26 @@ export function ReviewCard({ review, onReply }: ReviewCardProps) {
       </div>
 
       {/* Resposta da empresa */}
-      {review.owner_response && (
+      {review.owner_response && !isReplying && (
         <div className="mt-md pt-md border-t border-input-border pl-4 border-l-4 border-l-primary/20">
-          <div className="flex items-center gap-sm mb-sm">
-            <Reply className="w-4 h-4 text-text-muted" />
-            <span className="text-caption font-medium text-text-muted">
-              Resposta da empresa
-            </span>
+          <div className="flex items-center justify-between mb-sm">
+            <div className="flex items-center gap-sm">
+              <Reply className="w-4 h-4 text-text-muted" />
+              <span className="text-caption font-medium text-text-muted">
+                Resposta da empresa
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setReplyText(review.owner_response || '');
+                setIsReplying(true);
+              }}
+              className="flex items-center gap-1 text-xs font-medium text-text-muted hover:text-primary transition-colors"
+            >
+              <Pencil className="w-3 h-3" />
+              Editar
+            </button>
           </div>
           <p className="text-body text-text-secondary italic">
             "{review.owner_response}"
@@ -78,7 +91,7 @@ export function ReviewCard({ review, onReply }: ReviewCardProps) {
       )}
 
       {/* Botão/Form de resposta */}
-      {!review.owner_response && (
+      {(!review.owner_response || isReplying) && (
         <div className="mt-md pt-md border-t border-input-border">
           {isReplying ? (
             <div className="space-y-sm">
@@ -104,11 +117,11 @@ export function ReviewCard({ review, onReply }: ReviewCardProps) {
                 <Button
                   size="sm"
                   onClick={handleSubmitReply}
-                  disabled={!replyText.trim() || isSending}
+                  disabled={!replyText.trim() || isSending || (review.owner_response === replyText.trim())}
                   loading={isSending}
                   icon={<Send className="w-4 h-4" />}
                 >
-                  Enviar
+                  {review.owner_response ? 'Salvar Edição' : 'Enviar'}
                 </Button>
               </div>
             </div>
