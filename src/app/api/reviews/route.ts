@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateAuth, AuthError } from '@/lib/auth-helpers';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
     try {
         const auth = await validateAuth(request);
@@ -20,7 +23,7 @@ export async function GET(request: NextRequest) {
         comment,
         owner_response,
         created_at,
-        profiles:user_id (
+        profiles (
           full_name,
           avatar_url
         )

@@ -35,6 +35,7 @@ export default function EmpresaPage() {
         setIsLoadingReviews(true);
         const token = storeService.getAuthToken();
         const res = await fetch('/api/reviews', {
+          cache: 'no-store',
           headers: {
             'Authorization': `Bearer ${token}`
           }
