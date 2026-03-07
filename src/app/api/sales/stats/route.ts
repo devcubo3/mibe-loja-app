@@ -7,8 +7,7 @@ export async function GET(request: NextRequest) {
         const auth = await validateAuth(request);
         if (auth instanceof AuthError) return auth.toResponse();
 
-        const { companyId } = auth;
-        const supabaseAdmin = getSupabaseAdmin();
+        const { companyId, supabase } = auth;
 
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
         const yesterdayEnd = todayStart;
 
         // Buscar vendas de hoje
-        const { data: todaySales, error: todayError } = await supabaseAdmin
+        const { data: todaySales, error: todayError } = await supabase
             .from('transactions')
             .select('total_amount, net_amount_paid, cashback_earned')
             .eq('company_id', companyId)
@@ -25,7 +24,7 @@ export async function GET(request: NextRequest) {
         if (todayError) throw todayError;
 
         // Buscar vendas de ontem
-        const { data: yesterdaySales, error: yesterdayError } = await supabaseAdmin
+        const { data: yesterdaySales, error: yesterdayError } = await supabase
             .from('transactions')
             .select('total_amount, net_amount_paid, cashback_earned')
             .eq('company_id', companyId)
@@ -35,7 +34,7 @@ export async function GET(request: NextRequest) {
         if (yesterdayError) throw yesterdayError;
 
         // Buscar vendas recentes com dados do cliente
-        const { data: recentTransactions, error: recentError } = await supabaseAdmin
+        const { data: recentTransactions, error: recentError } = await supabase
             .from('transactions')
             .select(`
         id,

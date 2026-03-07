@@ -7,8 +7,7 @@ export async function GET(request: NextRequest) {
         const auth = await validateAuth(request);
         if (auth instanceof AuthError) return auth.toResponse();
 
-        const { companyId } = auth;
-        const supabaseAdmin = getSupabaseAdmin();
+        const { companyId, supabase } = auth;
         const searchParams = request.nextUrl.searchParams;
         const id = searchParams.get('id');
 
@@ -17,7 +16,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Buscar saldo do cliente
-        const { data: balance, error: balanceError } = await supabaseAdmin
+        const { data: balance, error: balanceError } = await supabase
             .from('cashback_balances')
             .select(`
         id,
@@ -41,7 +40,7 @@ export async function GET(request: NextRequest) {
 
         if (balanceError || !balance || !(balance as any).profiles) {
             // Cliente pode não ter saldo ainda, buscar só o profile
-            const { data: profile, error: profileError } = await supabaseAdmin
+            const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('id, full_name, cpf, phone, birth_date, created_at, avatar_url')
                 .eq('id', id)
@@ -59,7 +58,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Buscar estatísticas de transações
-        const { data: transactions } = await supabaseAdmin
+        const { data: transactions } = await supabase
             .from('transactions')
             .select('total_amount, cashback_earned')
             .eq('company_id', companyId)

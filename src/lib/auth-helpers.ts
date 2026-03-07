@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from './supabase-admin';
 
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database';
+
 export interface AuthResult {
   userId: string;
   companyId: string;
+  supabase: ReturnType<typeof createClient<Database>>;
 }
 
 export class AuthError {
   constructor(
     public message: string,
     public status: number
-  ) {}
+  ) { }
 
   toResponse() {
     return NextResponse.json({ error: this.message }, { status: this.status });
@@ -55,8 +59,20 @@ export async function validateAuth(
     return new AuthError('Empresa não encontrada para este usuário', 404);
   }
 
+  // Create an authenticated client scoped to this request
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const authClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  });
+
   return {
     userId: user.id,
     companyId: company.id,
+    supabase: authClient,
   };
 }

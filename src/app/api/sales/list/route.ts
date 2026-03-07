@@ -7,8 +7,7 @@ export async function GET(request: NextRequest) {
         const auth = await validateAuth(request);
         if (auth instanceof AuthError) return auth.toResponse();
 
-        const { companyId } = auth;
-        const supabaseAdmin = getSupabaseAdmin();
+        const { companyId, supabase } = auth;
         const searchParams = request.nextUrl.searchParams;
 
         const type = searchParams.get('type') || 'all';
@@ -17,7 +16,7 @@ export async function GET(request: NextRequest) {
         const page = parseInt(searchParams.get('page') || '0', 10);
         const pageSize = 20;
 
-        let query = supabaseAdmin
+        let query = supabase
             .from('transactions')
             .select(`
         id,

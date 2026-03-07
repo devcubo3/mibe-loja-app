@@ -7,8 +7,7 @@ export async function GET(request: NextRequest) {
         const auth = await validateAuth(request);
         if (auth instanceof AuthError) return auth.toResponse();
 
-        const { companyId } = auth;
-        const supabaseAdmin = getSupabaseAdmin();
+        const { companyId, supabase } = auth;
         const searchParams = request.nextUrl.searchParams;
 
         const search = searchParams.get('search') || '';
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
         const page = parseInt(searchParams.get('page') || '0', 10);
         const pageSize = 20;
 
-        let query = supabaseAdmin
+        let query = supabase
             .from('cashback_balances')
             .select(`
         id,
@@ -61,7 +60,7 @@ export async function GET(request: NextRequest) {
         let transactionStats: Record<string, { total_purchases: number; total_spent: number; total_cashback: number }> = {};
 
         if (customerIds.length > 0) {
-            const { data: transactions } = await supabaseAdmin
+            const { data: transactions } = await supabase
                 .from('transactions')
                 .select('user_id, total_amount, cashback_earned')
                 .eq('company_id', companyId)

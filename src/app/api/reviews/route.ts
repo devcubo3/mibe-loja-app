@@ -10,10 +10,9 @@ export async function GET(request: NextRequest) {
         const auth = await validateAuth(request);
         if (auth instanceof AuthError) return auth.toResponse();
 
-        const { companyId } = auth;
-        const supabaseAdmin = getSupabaseAdmin();
+        const { companyId, supabase } = auth;
 
-        const { data: reviews, error } = await supabaseAdmin
+        const { data: reviews, error } = await supabase
             .from('reviews')
             .select(`
         id,

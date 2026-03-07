@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
         const auth = await validateAuth(request);
         if (auth instanceof AuthError) return auth.toResponse();
 
-        const { companyId } = auth;
+        const { companyId, supabase } = auth;
         const body = await request.json();
         const { reviewId, text } = body;
 
@@ -15,10 +15,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'reviewId e text são obrigatórios' }, { status: 400 });
         }
 
-        const supabaseAdmin = getSupabaseAdmin();
-
         // Atualiza a resposta confirmando que o review pertence à loja
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await supabase
             .from('reviews')
             .update({ owner_response: text })
             .eq('id', reviewId)
