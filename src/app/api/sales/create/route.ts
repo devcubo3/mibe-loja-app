@@ -30,6 +30,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valor de cashback inválido' }, { status: 400 });
     }
 
+    // Gate: verificar assinatura ativa e empresa ativa
+    const [subscriptionResult, companyResult] = await Promise.all([
+      supabaseAdmin
+        .from('subscriptions')
+        .select('id, status, plans(commission_percent)')
+        .eq('company_id', companyId)
+        .neq('status', 'cancelled')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+
+      supabaseAdmin
+        .from('companies')
+        .select('is_active')
+        .eq('id', companyId)
+        .single(),
+    ]);
+
+    if (subscriptionResult.error || !subscriptionResult.data || subscriptionResult.data.status === 'cancelled') {
+      return NextResponse.json(
+        { error: 'Plano ativo necessário para registrar vendas', code: 'SUBSCRIPTION_REQUIRED' },
+        { status: 403 }
+      );
+    }
+
+    if (!companyResult.data?.is_active) {
+      return NextResponse.json(
+        { error: 'Conta bloqueada por faturas em atraso. Regularize para continuar.', code: 'ACCOUNT_BLOCKED' },
+        { status: 403 }
+      );
+    }
+
+    const subscription = subscriptionResult.data;
+    const commissionPercent = (subscription.plans as any)?.commission_percent ?? 0;
+
     // Inserir transação com admin client (bypassa RLS)
     const { data: newSale, error: insertError } = await supabaseAdmin
       .from('transactions')
@@ -70,6 +105,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Comissão diária é calculada automaticamente pelo trigger fn_upsert_daily_commission
 
     // Formatar resposta no formato SaleWithCustomer
     const sale = {

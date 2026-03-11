@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
       app_configs: {
@@ -99,6 +104,7 @@ export type Database = {
           expiration_days: number | null
           has_expiration: boolean | null
           id: string
+          is_active: boolean
           latitude: number | null
           logo_url: string | null
           longitude: number | null
@@ -123,6 +129,7 @@ export type Database = {
           expiration_days?: number | null
           has_expiration?: boolean | null
           id?: string
+          is_active?: boolean
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
@@ -147,6 +154,7 @@ export type Database = {
           expiration_days?: number | null
           has_expiration?: boolean | null
           id?: string
+          is_active?: boolean
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
@@ -210,73 +218,116 @@ export type Database = {
           },
         ]
       }
-
-      password_reset_tokens: {
+      company_users: {
         Row: {
-          id: string
-          user_id: string
-          user_type: string
-          token_hash: string
-          expires_at: string
-          used_at: string | null
+          company_id: string
           created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string
+          onboarding_completed: boolean | null
+          password_hash: string
+          updated_at: string | null
         }
         Insert: {
-          id?: string
-          user_id: string
-          user_type: string
-          token_hash: string
-          expires_at: string
-          used_at?: string | null
+          company_id: string
           created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          onboarding_completed?: boolean | null
+          password_hash: string
+          updated_at?: string | null
         }
         Update: {
+          company_id?: string
+          created_at?: string | null
+          email?: string
           id?: string
+          is_active?: boolean | null
+          name?: string
+          onboarding_completed?: boolean | null
+          password_hash?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      password_reset_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          token_hash: string
+          used_at: string | null
+          user_id: string
+          user_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          token_hash: string
+          used_at?: string | null
+          user_id: string
+          user_type?: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          token_hash?: string
+          used_at?: string | null
           user_id?: string
           user_type?: string
-          token_hash?: string
-          expires_at?: string
-          used_at?: string | null
-          created_at?: string | null
         }
         Relationships: []
       }
       payment_history: {
         Row: {
           amount: number
-          base_amount: number
+          commission_date: string | null
           created_at: string
           due_date: string
-          excess_amount: number
           gateway_reference: string | null
           id: string
           payment_date: string | null
           status: string
           subscription_id: string
+          type: string
         }
         Insert: {
           amount: number
-          base_amount: number
+          commission_date?: string | null
           created_at?: string
           due_date: string
-          excess_amount?: number
           gateway_reference?: string | null
           id?: string
           payment_date?: string | null
           status?: string
           subscription_id: string
+          type?: string
         }
         Update: {
           amount?: number
-          base_amount?: number
+          commission_date?: string | null
           created_at?: string
           due_date?: string
-          excess_amount?: number
           gateway_reference?: string | null
           id?: string
           payment_date?: string | null
           status?: string
           subscription_id?: string
+          type?: string
         }
         Relationships: [
           {
@@ -290,37 +341,34 @@ export type Database = {
       }
       plans: {
         Row: {
+          commission_percent: number
           created_at: string | null
           description: string | null
-          excess_user_fee: number
           id: string
           is_active: boolean
           monthly_price: number
           name: string
           updated_at: string
-          user_limit: number
         }
         Insert: {
+          commission_percent?: number
           created_at?: string | null
           description?: string | null
-          excess_user_fee: number
           id?: string
           is_active?: boolean
           monthly_price: number
           name: string
           updated_at?: string
-          user_limit: number
         }
         Update: {
+          commission_percent?: number
           created_at?: string | null
           description?: string | null
-          excess_user_fee?: number
           id?: string
           is_active?: boolean
           monthly_price?: number
           name?: string
           updated_at?: string
-          user_limit?: number
         }
         Relationships: []
       }
@@ -407,11 +455,11 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          asaas_customer_id: string | null
+          asaas_payment_id: string | null
           company_id: string
           created_at: string
-          current_profile_count: number
-          excess_amount: number
-          excess_profiles: number
+          expires_at: string | null
           id: string
           plan_id: string
           started_at: string
@@ -419,11 +467,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
           company_id: string
           created_at?: string
-          current_profile_count?: number
-          excess_amount?: number
-          excess_profiles?: number
+          expires_at?: string | null
           id?: string
           plan_id: string
           started_at?: string
@@ -431,11 +479,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asaas_customer_id?: string | null
+          asaas_payment_id?: string | null
           company_id?: string
           created_at?: string
-          current_profile_count?: number
-          excess_amount?: number
-          excess_profiles?: number
+          expires_at?: string | null
           id?: string
           plan_id?: string
           started_at?: string
@@ -516,8 +564,29 @@ export type Database = {
     }
     Functions: {
       check_email_exists: { Args: { email_input: string }; Returns: boolean }
+      fn_check_overdue_invoices: { Args: Record<string, never>; Returns: undefined }
       expire_old_cashback: { Args: Record<string, never>; Returns: undefined }
+      expire_subscriptions: { Args: Record<string, never>; Returns: undefined }
       is_super_admin: { Args: Record<string, never>; Returns: boolean }
+      nearby_companies: {
+        Args: {
+          max_results?: number
+          radius_km?: number
+          user_lat: number
+          user_lng: number
+        }
+        Returns: {
+          business_name: string
+          cashback_percent: number
+          category_id: number
+          category_name: string
+          dist_meters: number
+          id: string
+          latitude: number
+          logo_url: string
+          longitude: number
+        }[]
+      }
     }
     Enums: {
       company_status: "active" | "inactive" | "pending"
@@ -537,7 +606,6 @@ export type Enums<T extends keyof Database['public']['Enums']> = Database['publi
 
 // Aliases para tabelas mais usadas
 export type Company = Tables<'companies'>
-// company_users removida — lojistas agora usam auth.users + profiles
 export type Profile = Tables<'profiles'>
 export type Transaction = Tables<'transactions'>
 export type CashbackBalance = Tables<'cashback_balances'>

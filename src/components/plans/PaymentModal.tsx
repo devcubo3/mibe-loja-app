@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
     QrCode,
     CreditCard,
@@ -9,35 +9,70 @@ import {
     Check,
     ExternalLink,
     AlertCircle,
-    ArrowLeft
+    ArrowLeft,
+    CheckCircle,
 } from 'lucide-react';
 import { Modal, Button } from '@/components/ui';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import { storeService } from '@/services/storeService';
-import type { Plan, SubscriptionWithPlan } from '@/types/plan';
-import type { PaymentMethod, PaymentStep, CreatePaymentResponse, PixData } from '@/types/payment';
+import type { PaymentMethod, PaymentStep, CreatePaymentResponse } from '@/types/payment';
 
 interface PaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
-    plan: Plan;
-    currentSubscription: SubscriptionWithPlan | null;
+    invoiceIds: string[];
+    totalAmount: number;
+    onPaymentComplete?: () => void;
 }
 
 export function PaymentModal({
     isOpen,
     onClose,
-    plan,
-    currentSubscription,
+    invoiceIds,
+    totalAmount,
+    onPaymentComplete,
 }: PaymentModalProps) {
     const [step, setStep] = useState<PaymentStep>('select-method');
     const [paymentData, setPaymentData] = useState<CreatePaymentResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    const isUpgrade = currentSubscription
-        ? plan.monthly_price > currentSubscription.plan.monthly_price
-        : true;
+    // Polling: verifica status PIX a cada 5s enquanto exibindo QR code
+    useEffect(() => {
+        if (step !== 'pix-display' || !paymentData?.payment_id) return;
+
+        const token = storeService.getAuthToken();
+        if (!token) return;
+
+        const checkPayment = async () => {
+            try {
+                const res = await fetch(
+                    `/api/subscription/check-payment?payment_id=${paymentData.payment_id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.is_paid) {
+                    stopPolling();
+                    setStep('payment-confirmed');
+                    onPaymentComplete?.();
+                }
+            } catch {
+                // Ignorar erros de rede no polling
+            }
+        };
+
+        pollingRef.current = setInterval(checkPayment, 5000);
+        return stopPolling;
+    }, [step, paymentData?.payment_id]);
+
+    const stopPolling = () => {
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
+    };
 
     const handleSelectMethod = async (method: PaymentMethod) => {
         setStep('processing');
@@ -51,14 +86,14 @@ export function PaymentModal({
         }
 
         try {
-            const response = await fetch('/api/payment/create', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/abacatepay-pay`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    plan_id: plan.id,
+                    payment_history_ids: invoiceIds,
                     billing_type: method,
                 }),
             });
@@ -95,12 +130,14 @@ export function PaymentModal({
     };
 
     const handleBack = () => {
+        stopPolling();
         setStep('select-method');
         setError(null);
         setPaymentData(null);
     };
 
     const handleClose = () => {
+        stopPolling();
         setStep('select-method');
         setError(null);
         setPaymentData(null);
@@ -109,30 +146,20 @@ export function PaymentModal({
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={handleClose} title="Pagamento do Plano">
+        <Modal isOpen={isOpen} onClose={handleClose} title="Pagamento de Faturas">
             <div className="space-y-lg">
-                {/* Resumo do plano */}
+                {/* Resumo das faturas */}
                 <div className="bg-input-bg rounded-xl p-md">
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="text-caption text-secondary">Plano selecionado</p>
-                            <p className="text-body-lg font-semibold text-primary">{plan.name}</p>
+                            <p className="text-caption text-secondary">Faturas selecionadas</p>
+                            <p className="text-body-lg font-semibold text-primary">{invoiceIds.length} fatura{invoiceIds.length > 1 ? 's' : ''}</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-caption text-secondary">Valor</p>
-                            <p className="text-body-lg font-bold text-primary">
-                                {formatCurrency(plan.monthly_price)}
-                                <span className="text-caption text-secondary font-normal">/mês</span>
-                            </p>
+                            <p className="text-caption text-secondary">Total</p>
+                            <p className="text-body-lg font-bold text-primary">{formatCurrency(totalAmount)}</p>
                         </div>
                     </div>
-                    {currentSubscription && (
-                        <div className="mt-sm pt-sm border-t border-input-border">
-                            <span className={`text-caption ${isUpgrade ? 'text-success' : 'text-warning'}`}>
-                                {isUpgrade ? '↑ Upgrade' : '↓ Downgrade'} do plano {currentSubscription.plan.name}
-                            </span>
-                        </div>
-                    )}
                 </div>
 
                 {/* Etapa: Seleção de método */}
@@ -187,16 +214,14 @@ export function PaymentModal({
                         </div>
 
                         <div className="flex flex-col items-center gap-md">
-                            {/* QR Code */}
                             <div className="bg-white p-md rounded-xl shadow-sm">
                                 <img
-                                    src={`data:image/png;base64,${paymentData.pix.qrCodeImage}`}
+                                    src={paymentData.pix.qrCodeImage}
                                     alt="QR Code PIX"
                                     className="w-48 h-48"
                                 />
                             </div>
 
-                            {/* Valor */}
                             <div className="text-center">
                                 <p className="text-caption text-secondary">Valor a pagar</p>
                                 <p className="text-heading-lg font-bold text-primary">
@@ -204,7 +229,6 @@ export function PaymentModal({
                                 </p>
                             </div>
 
-                            {/* Código Copia e Cola */}
                             <div className="w-full">
                                 <div className="flex gap-sm">
                                     <input
@@ -218,32 +242,44 @@ export function PaymentModal({
                                         onClick={handleCopyPixCode}
                                     >
                                         {copied ? (
-                                            <>
-                                                <Check className="w-4 h-4" />
-                                                Copiado
-                                            </>
+                                            <><Check className="w-4 h-4" /> Copiado</>
                                         ) : (
-                                            <>
-                                                <Copy className="w-4 h-4" />
-                                                Copiar
-                                            </>
+                                            <><Copy className="w-4 h-4" /> Copiar</>
                                         )}
                                     </Button>
                                 </div>
                             </div>
 
-                            {/* Validade */}
                             <p className="text-caption text-secondary">
                                 Válido até {formatDateTime(paymentData.pix.expirationDate)}
                             </p>
                         </div>
 
-                        <div className="bg-success/10 border border-success/20 rounded-xl p-md">
-                            <p className="text-body text-success text-center">
-                                Após o pagamento, seu plano será ativado automaticamente em alguns minutos.
+                        <div className="bg-input-bg border border-input-border rounded-xl p-md flex items-center gap-sm">
+                            <Loader2 className="w-4 h-4 text-secondary animate-spin shrink-0" />
+                            <p className="text-caption text-secondary">
+                                Aguardando confirmação do pagamento...
                             </p>
                         </div>
                     </>
+                )}
+
+                {/* Etapa: Pagamento confirmado */}
+                {step === 'payment-confirmed' && (
+                    <div className="flex flex-col items-center gap-md py-md">
+                        <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center">
+                            <CheckCircle className="w-8 h-8 text-success" />
+                        </div>
+                        <div className="text-center">
+                            <p className="text-body-lg font-semibold text-primary">Pagamento confirmado!</p>
+                            <p className="text-body text-secondary mt-xs">
+                                Sua assinatura foi ativada com sucesso.
+                            </p>
+                        </div>
+                        <Button fullWidth onClick={handleClose}>
+                            Fechar
+                        </Button>
+                    </div>
                 )}
 
                 {/* Etapa: Redirect para Cartão */}
@@ -275,7 +311,7 @@ export function PaymentModal({
 
                         <div className="bg-input-bg rounded-xl p-md">
                             <p className="text-caption text-secondary text-center">
-                                Você será redirecionado para uma página segura do Asaas para inserir os dados do cartão.
+                                Você será redirecionado para uma página segura para inserir os dados do cartão.
                             </p>
                         </div>
                     </>
@@ -305,7 +341,6 @@ export function PaymentModal({
                     </>
                 )}
 
-                {/* Botão Cancelar (exceto em processing e error) */}
                 {['select-method', 'pix-display', 'redirect-card'].includes(step) && (
                     <Button variant="ghost" fullWidth onClick={handleClose}>
                         {step === 'select-method' ? 'Cancelar' : 'Fechar'}

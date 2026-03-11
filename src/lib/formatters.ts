@@ -108,6 +108,12 @@ export function formatTime(date: string): string {
  * @returns String formatada (ex: "23/12/2024")
  */
 export function formatDate(date: string): string {
+  // Strings YYYY-MM-DD são interpretadas como UTC midnight pelo JS.
+  // Criar como data local evita o deslocamento de fuso (ex: UTC-3 mostraria o dia anterior).
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [year, month, day] = date.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
+  }
   return new Date(date).toLocaleDateString('pt-BR');
 }
 
@@ -250,6 +256,9 @@ export function parseBirthDateInput(value: string): string {
  */
 export function formatBirthDate(value: string): string {
   if (!value) return '';
-  const date = new Date(value);
-  return date.toLocaleDateString('pt-BR');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
+  }
+  return new Date(value).toLocaleDateString('pt-BR');
 }

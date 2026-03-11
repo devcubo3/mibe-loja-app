@@ -62,11 +62,7 @@ export function PlanCard({ plan, isCurrentPlan, isCancelled, onSelect }: PlanCar
 
         <div className="space-y-sm mb-lg">
           <Feature
-            text={`Até ${plan.user_limit} clientes`}
-            isCurrentPlan={isCurrentPlan}
-          />
-          <Feature
-            text={`Excedente: ${formatCurrency(plan.excess_user_fee)}/cliente`}
+            text={`${plan.commission_percent}% de comissão sobre vendas diárias`}
             isCurrentPlan={isCurrentPlan}
           />
         </div>
@@ -77,7 +73,7 @@ export function PlanCard({ plan, isCurrentPlan, isCancelled, onSelect }: PlanCar
           disabled={isCurrentPlan || isCancelled}
           onClick={() => onSelect(plan)}
         >
-          {isCurrentPlan ? 'Plano ativo' : 'Selecionar plano'}
+          {isCurrentPlan ? 'Plano ativo' : 'Assinar plano'}
         </Button>
       </CardContent>
     </Card>

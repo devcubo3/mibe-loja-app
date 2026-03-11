@@ -3,7 +3,7 @@
 1. Visão Geral do Sistema
 O Mibe é um ecossistema de cashback operando em um modelo B2B2C.
 
-Super Admin: Gerencia o app, planos e taxas globais.
+Super Admin: Gerencia o app, planos, mensalidade e comissão global.
 
 Empresas (Lojistas): Configuram regras de fidelidade e registram vendas.
 
@@ -15,7 +15,7 @@ O banco de dados foi projetado para garantir integridade financeira. As tabelas 
 A. Núcleo de Identidade
 profiles: Extensão da tabela auth.users. Contém CPF (único), nome completo e o role (super_admin, company_owner, client). Usado para clientes finais e admins do sistema.
 
-companies: Dados cadastrais (CNPJ) e as Regras de Negócio (porcentagem de cashback, valor mínimo de compra, dias para expiração).
+companies: Dados cadastrais (CNPJ) e as Regras de Negócio (porcentagem de cashback, valor mínimo de compra, dias para expiração). Possui o campo `is_active` (BOOLEAN, default true) que controla se a empresa pode operar — desativado automaticamente em caso de inadimplência.
 
 company_users: Usuários vinculados a um estabelecimento específico. Utilizam o app da empresa para operações. Estrutura:
 - id (UUID, PK)
@@ -37,43 +37,39 @@ transactions: Registro imutável de cada operação. Armazena o valor total, o r
 
 C. Núcleo de Gestão
 
-app_configs: Armazena a global_fee_percent, que é a comissão do Mibe sobre as vendas.
+app_configs: Armazena configurações globais do sistema definidas pelo Super Admin.
 
 D. Núcleo de Planos & Assinaturas
 
-plans: Define os planos disponíveis para as empresas. Estrutura:
+plans: Define o plano de assinatura disponível para as empresas. O sistema opera com um plano único configurado pelo Admin. Estrutura:
 - id (UUID, PK)
-- name (TEXT) - Nome do plano (ex: "básico", "profissional")
-- monthly_price (NUMERIC) - Preço mensal do plano
-- user_limit (INTEGER) - Limite de clientes únicos por mês
-- excess_user_fee (NUMERIC) - Taxa cobrada por cliente excedente
+- name (TEXT) - Nome do plano
+- monthly_price (NUMERIC) - Mensalidade fixa do plano
+- commission_percent (NUMERIC) - Percentual de comissão cobrado sobre o valor total das vendas diárias
 - description (TEXT, nullable) - Descrição do plano
 - is_active (BOOLEAN, default true) - Se o plano está disponível para contratação
 - created_at, updated_at (TIMESTAMP)
 
-subscriptions: Assinatura ativa de cada empresa. Relaciona empresa ao plano contratado e rastreia o uso. Estrutura:
+subscriptions: Assinatura ativa de cada empresa. Relaciona empresa ao plano contratado. Estrutura:
 - id (UUID, PK)
 - company_id (FK → companies) - Empresa assinante
 - plan_id (FK → plans) - Plano contratado
 - status (TEXT) - 'active', 'overdue' ou 'cancelled'
 - started_at (TIMESTAMP) - Data de início da assinatura
-- current_profile_count (INTEGER, default 0) - Total de clientes únicos ativos
-- excess_profiles (INTEGER, default 0) - Quantidade de perfis acima do limite
-- excess_amount (NUMERIC, default 0) - Valor total dos excedentes (excess_profiles × excess_user_fee)
 - created_at, updated_at (TIMESTAMP)
 
-> **Importante:** `current_profile_count`, `excess_profiles` e `excess_amount` são calculados automaticamente por triggers no banco. O front-end apenas lê esses valores.
+> **Importante:** O status da assinatura (`overdue`/`cancelled`) reflete inadimplência, mas é o campo `companies.is_active` que efetivamente bloqueia as operações da empresa.
 
 payment_history: Registro de faturas e pagamentos vinculados à assinatura. Estrutura:
 - id (UUID, PK)
 - subscription_id (FK → subscriptions) - Assinatura relacionada
-- amount (NUMERIC) - Valor total da fatura (base + excedente)
-- base_amount (NUMERIC) - Valor do plano mensal
-- excess_amount (NUMERIC, default 0) - Valor cobrado por excedentes no período
+- type (VARCHAR) - 'MENSALIDADE' ou 'COMISSAO_DIARIA'
+- amount (NUMERIC) - Valor total da fatura
 - status (VARCHAR) - 'pending', 'paid', 'failed' ou 'refunded'
-- due_date (DATE) - Data de vencimento
+- due_date (DATE) - Data de vencimento (7 dias após geração)
 - payment_date (TIMESTAMP, nullable) - Data efetiva do pagamento
-- gateway_reference (VARCHAR, nullable) - Referência do gateway de pagamento externo
+- commission_date (DATE, nullable) - Para COMISSAO_DIARIA: data do dia de vendas ao qual a fatura se refere
+- gateway_reference (VARCHAR, nullable) - Referência do gateway de pagamento externo (AbacatePay)
 - created_at (TIMESTAMP)
 
 3. Regras de Negócio Cruciais (Lógica de Implementação)
@@ -91,46 +87,58 @@ Toda nova compra (transaction) deve atualizar o campo last_purchase_date na tabe
 
 Se o cliente ficar X dias sem comprar na empresa Y, o saldo dele naquela empresa deve ser zerado.
 
-3.3. Cobrança de Planos e Usuários Únicos
-A monetização da empresa não é por transação apenas, mas por volume de clientes.
+3.3. Modelo de Cobrança (Mensalidade + Comissão Diária)
+A monetização da empresa é composta por dois tipos de fatura:
 
-Usuário Único: Se o Cliente A comprar 10 vezes no mês na Loja B, ele conta como 1 usuário único para fins de cobrança de plano.
+**MENSALIDADE:** Fatura mensal com valor fixo definido no plano (`plans.monthly_price`). Gerada uma vez por mês. Vencimento em 7 dias após a geração.
 
-Se a empresa ultrapassar o user_limit do plano, deve ser cobrada a excess_user_fee por cada novo ID de usuário distinto.
+**COMISSAO_DIARIA:** Fatura diária gerada automaticamente na primeira venda do dia. O valor é acumulado ao longo do dia conforme novas vendas são registradas. Fecha à meia-noite (00:00). Vencimento em 7 dias após o fechamento.
 
-3.4. Registro de Pagamento
-O sistema não processa o pagamento (cartão/PIX). Ele apenas registra o evento. A IA deve tratar isso como um log de fidelidade verificado pelo lojista.
+Fórmula da comissão: `commission_amount = total_amount_da_venda × (plans.commission_percent / 100)`
+
+Regra de unicidade: Existe no máximo **um** registro de `COMISSAO_DIARIA` por empresa por dia. A cada nova venda, o campo `amount` desse registro é atualizado (acumulado).
+
+3.4. Fluxo de Registro de Venda com Gate de Plano
+Antes de registrar uma venda, o sistema deve verificar:
+
+```
+Lojista tenta registrar venda
+        ↓
+Tem assinatura ativa? (subscriptions.status = 'active')
+  └─ NÃO → Bloquear + CTA para assinar plano
+        ↓
+Conta ativa? (companies.is_active = true)
+  └─ NÃO → Bloquear + CTA para pagar faturas vencidas
+        ↓
+Venda registrada
+        ↓
+Fatura COMISSAO_DIARIA aberta para hoje?
+  ├─ SIM → Atualizar amount (acumular comissão)
+  └─ NÃO → Criar nova fatura do dia (status: pending)
+```
 
 3.5. Fluxo de Assinatura
 Toda empresa deve ter uma assinatura ativa vinculada a um plano para operar.
 
-Criação: Ao criar a assinatura, o trigger `initialize_subscription_profile_count` conta automaticamente os clientes únicos existentes (via `cashback_balances`) e calcula os excedentes iniciais.
+Criação: A empresa assina o plano pelo próprio app (self-service). Ao criar a assinatura, o status inicia como `active`.
 
-Troca de Plano: Ao alterar o `plan_id` de uma assinatura, o trigger `recalculate_on_plan_change` recalcula `excess_profiles` e `excess_amount` com base nos limites do novo plano.
+Status: Uma assinatura pode estar `active` (operação normal), `overdue` (pagamento atrasado) ou `cancelled` (operação bloqueada).
 
-Status: Uma assinatura pode estar `active` (operação normal), `overdue` (pagamento atrasado, operação com alertas) ou `cancelled` (operação bloqueada).
+3.6. Fluxo de Inadimplência e Bloqueio
+O controle de inadimplência é baseado no vencimento das faturas em `payment_history`:
 
-3.6. Cálculo Automático de Excedentes
-A contagem de clientes únicos por empresa é feita via `COUNT(DISTINCT user_id)` na tabela `cashback_balances`.
+1. Fatura com status `pending` e `due_date` ultrapassado → entra em atraso.
+2. Fatura vencida há **mais de 3 dias** sem pagamento → `companies.is_active` é definido como `false` automaticamente (via job agendado ou trigger).
+3. Ao quitar todas as faturas pendentes/vencidas (status `paid`) → `companies.is_active` é restaurado para `true` automaticamente.
+4. A assinatura é marcada como `overdue` enquanto houver faturas vencidas e `cancelled` apenas por ação manual do Admin.
 
-O trigger `recalculate_subscription_excess` é disparado em qualquer INSERT, UPDATE ou DELETE na `cashback_balances`. Ele:
-1. Conta os perfis únicos da empresa
-2. Busca o `user_limit` e `excess_user_fee` do plano via `subscriptions → plans`
-3. Calcula: `excess_profiles = MAX(0, profile_count - user_limit)`
-4. Calcula: `excess_amount = excess_profiles × excess_user_fee`
-5. Atualiza a `subscriptions` com os novos valores
-
-Fórmula: excess_amount = MAX(0, current_profile_count - user_limit) × excess_user_fee
-
-3.7. Ciclo de Cobrança
-A cada período (mensal), uma fatura é gerada na tabela `payment_history` com:
-- `base_amount`: preço do plano (`plans.monthly_price`)
-- `excess_amount`: valor excedente da assinatura (`subscriptions.excess_amount`)
-- `amount`: total (`base_amount + excess_amount`)
-- `due_date`: data de vencimento
-- `status`: inicia como `pending`
-
-Ao receber confirmação do gateway de pagamento (`gateway_reference`), o status muda para `paid` e `payment_date` é preenchido. Se falhar, muda para `failed` e a assinatura pode ser marcada como `overdue`.
+3.7. Processamento de Pagamento
+O pagamento é processado via gateway **AbacatePay**. O sistema:
+1. Cria a cobrança no AbacatePay ao gerar a fatura (PIX via `/pixQrCode/create`, Cartão via `/billing/create`).
+2. Recebe confirmação via webhook do AbacatePay (evento `billing.paid`).
+3. Ao confirmar pagamento: atualiza `payment_history.status = 'paid'`, preenche `payment_date` e `gateway_reference`.
+4. Se falhar: `status = 'failed'` e a assinatura pode ser marcada como `overdue`.
+5. Ao quitar todas as pendências: `companies.is_active = true` e `subscriptions.status = 'active'`.
 
 4. Padrões de Desenvolvimento Exigidos
 4.1. Segurança (RLS - Row Level Security)
@@ -151,21 +159,19 @@ Planos (plans):
 
 Assinaturas (subscriptions):
 - Leitura: O `owner` da empresa (`subscriptions_select_owner` via `companies.owner_id = auth.uid()`) ou `super_admin`.
-- Inserção/Atualização: Somente `super_admin`. A troca de plano pela loja é feita via API route com service role.
+- Inserção/Atualização: Somente `super_admin`. A assinatura pelo lojista é feita via API route com service role.
 
 Histórico de Pagamentos (payment_history):
 - Leitura: O `owner` da empresa (`payment_history_select_owner` via `subscriptions → companies.owner_id`) ou `super_admin`.
-- Inserção/Atualização: Somente `super_admin`.
+- Inserção/Atualização: Somente `super_admin` ou via API route com service role (geração automática de faturas).
 
 4.2. Integridade
-Sempre use Transactions (DB) ao registrar uma compra. A inserção na tabela transactions e a atualização na cashback_balances devem ocorrer juntas ou falhar juntas.
+Sempre use Transactions (DB) ao registrar uma compra. A inserção na tabela transactions, a atualização na cashback_balances e a atualização/criação da fatura COMISSAO_DIARIA devem ocorrer juntas ou falhar juntas.
 
 Triggers: O cálculo da taxa administrativa (admin_fee_amount) deve ser automatizado via Trigger para evitar erros no front-end.
 
 Triggers de Assinatura:
-- `initialize_subscription_profile_count` (BEFORE INSERT em `subscriptions`): Ao criar uma assinatura, conta os `DISTINCT user_id` em `cashback_balances` para a empresa e inicializa `current_profile_count`, `excess_profiles` e `excess_amount`.
-- `recalculate_subscription_excess` (AFTER INSERT/UPDATE/DELETE em `cashback_balances`): A cada mudança nos saldos de cashback, reconta os perfis únicos da empresa e atualiza a assinatura com os novos valores de excedente.
-- `recalculate_on_plan_change` (BEFORE UPDATE em `subscriptions`): Quando o `plan_id` muda, busca os novos limites do plano e recalcula `excess_profiles` e `excess_amount` sem recontar perfis (usa o `current_profile_count` existente).
 - `update_subscriptions_updated_at` / `update_plans_updated_at`: Atualizam o campo `updated_at` automaticamente.
+- `check_company_inadimplencia` (AFTER INSERT/UPDATE em `payment_history`): Ao marcar todas as faturas vencidas como `paid`, atualiza `companies.is_active = true` e `subscriptions.status = 'active'`.
 
 Avaliações: Um cliente só pode avaliar uma empresa uma única vez (UPSERT). A empresa pode responder, mas não editar a nota do cliente.

@@ -5,7 +5,7 @@ export type Plan = PlanRow;
 export type PaymentRecord = PaymentHistoryRow;
 
 // Status tipados (o banco usa string genérica)
-export type SubscriptionStatus = 'active' | 'overdue' | 'cancelled';
+export type SubscriptionStatus = 'active' | 'overdue' | 'cancelled' | 'pending_payment';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 
 // Subscription com plan joinado
@@ -19,6 +19,7 @@ export const SUBSCRIPTION_STATUS_CONFIG: Record<SubscriptionStatus, { label: str
   active: { label: 'Ativa', variant: 'success' },
   overdue: { label: 'Inadimplente', variant: 'warning' },
   cancelled: { label: 'Cancelada', variant: 'error' },
+  pending_payment: { label: 'Aguardando pagamento', variant: 'warning' },
 };
 
 // Labels e cores para status de pagamento
@@ -27,4 +28,12 @@ export const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, { label: string; varia
   paid: { label: 'Pago', variant: 'success' },
   failed: { label: 'Falhou', variant: 'error' },
   refunded: { label: 'Reembolsado', variant: 'dark' },
+};
+
+// Tipos de fatura
+export type InvoiceType = 'MENSALIDADE' | 'COMISSAO_DIARIA';
+
+export const INVOICE_TYPE_CONFIG: Record<InvoiceType, { label: string }> = {
+  MENSALIDADE: { label: 'Mensalidade' },
+  COMISSAO_DIARIA: { label: 'Comissão Diária' },
 };

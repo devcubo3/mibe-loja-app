@@ -1,10 +1,10 @@
 'use client';
 
-import { Receipt } from 'lucide-react';
-import { Card, CardContent, Badge, EmptyState } from '@/components/ui';
+import { Receipt, FileText } from 'lucide-react';
+import { Badge, EmptyState } from '@/components/ui';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import type { PaymentRecord, PaymentStatus } from '@/types/plan';
-import { PAYMENT_STATUS_CONFIG } from '@/types/plan';
+import type { PaymentRecord, PaymentStatus, InvoiceType } from '@/types/plan';
+import { PAYMENT_STATUS_CONFIG, INVOICE_TYPE_CONFIG } from '@/types/plan';
 
 interface PaymentHistoryTableProps {
   payments: PaymentRecord[];
@@ -22,65 +22,42 @@ export function PaymentHistoryTable({ payments }: PaymentHistoryTableProps) {
   }
 
   return (
-    <>
-      {/* Desktop: tabela */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-input-border">
-              <th className="text-left text-caption text-secondary font-medium py-sm px-md">Vencimento</th>
-              <th className="text-right text-caption text-secondary font-medium py-sm px-md">Base</th>
-              <th className="text-right text-caption text-secondary font-medium py-sm px-md">Excedente</th>
-              <th className="text-right text-caption text-secondary font-medium py-sm px-md">Total</th>
-              <th className="text-center text-caption text-secondary font-medium py-sm px-md">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {payments.map((payment) => {
-              const statusConfig = PAYMENT_STATUS_CONFIG[payment.status as PaymentStatus] || PAYMENT_STATUS_CONFIG.pending;
-              return (
-                <tr key={payment.id} className="border-b border-input-border last:border-0">
-                  <td className="py-md px-md text-body text-primary">{formatDate(payment.due_date)}</td>
-                  <td className="py-md px-md text-body text-primary text-right">{formatCurrency(payment.base_amount)}</td>
-                  <td className="py-md px-md text-body text-secondary text-right">
-                    {payment.excess_amount > 0 ? formatCurrency(payment.excess_amount) : '—'}
-                  </td>
-                  <td className="py-md px-md text-body font-semibold text-primary text-right">{formatCurrency(payment.amount)}</td>
-                  <td className="py-md px-md text-center">
-                    <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+    <div className="flex flex-wrap gap-sm">
+      {payments.map((payment) => {
+        const statusConfig = PAYMENT_STATUS_CONFIG[payment.status as PaymentStatus] || PAYMENT_STATUS_CONFIG.pending;
+        const typeLabel = INVOICE_TYPE_CONFIG[payment.type as InvoiceType]?.label || payment.type;
 
-      {/* Mobile: cards */}
-      <div className="md:hidden space-y-sm">
-        {payments.map((payment) => {
-          const statusConfig = PAYMENT_STATUS_CONFIG[payment.status as PaymentStatus] || PAYMENT_STATUS_CONFIG.pending;
-          return (
-            <Card key={payment.id} variant="outlined">
-              <CardContent className="p-md">
-                <div className="flex items-center justify-between mb-sm">
-                  <span className="text-body text-secondary">{formatDate(payment.due_date)}</span>
-                  <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-caption text-secondary">
-                    {formatCurrency(payment.base_amount)}
-                    {payment.excess_amount > 0 && (
-                      <span className="text-error"> + {formatCurrency(payment.excess_amount)}</span>
-                    )}
-                  </div>
-                  <span className="text-body-lg font-semibold text-primary">{formatCurrency(payment.amount)}</span>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </>
+        return (
+          <div
+            key={payment.id}
+            className="w-44 flex flex-col items-start gap-xs p-md rounded-3xl border border-input-border bg-card-bg"
+          >
+            {/* Ícone */}
+            <div className="w-10 h-10 rounded-2xl bg-stone-100 flex items-center justify-center mb-xs">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+
+            {/* Tipo */}
+            <p className="text-body font-bold text-primary leading-snug">{typeLabel}</p>
+
+            {/* Referência */}
+            {payment.commission_date && (
+              <p className="text-body text-secondary">{formatDate(payment.commission_date)}</p>
+            )}
+
+            {/* Valor */}
+            <p className="text-title font-bold text-primary">{formatCurrency(payment.amount)}</p>
+
+            {/* Vencimento */}
+            <p className="text-body text-secondary">Venc. {formatDate(payment.due_date)}</p>
+
+            {/* Status */}
+            <Badge variant={statusConfig.variant}>
+              {statusConfig.label}
+            </Badge>
+          </div>
+        );
+      })}
+    </div>
   );
 }

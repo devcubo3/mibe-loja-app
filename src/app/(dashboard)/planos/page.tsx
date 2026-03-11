@@ -1,14 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { CreditCard } from 'lucide-react';
+import { AlertOctagon, CreditCard } from 'lucide-react';
 import { SkeletonCard, SkeletonText, EmptyState } from '@/components/ui';
+import { formatCurrency } from '@/lib/formatters';
 import { usePlans } from '@/hooks/usePlans';
+import { storeService } from '@/services/storeService';
 import {
   CurrentPlanCard,
   PlanCard,
   PaymentModal,
   PaymentHistoryTable,
+  PendingInvoicesTable,
 } from '@/components/plans';
 import type { Plan } from '@/types/plan';
 
@@ -16,15 +19,44 @@ export default function PlanosPage() {
   const {
     plans,
     subscription,
-    payments,
+    pendingInvoices,
+    paidInvoices,
+    companyIsActive,
     isLoading,
     error,
+    selectedInvoiceIds,
+    setSelectedInvoiceIds,
+    totalSelectedAmount,
+    reload,
   } = usePlans();
 
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
-  const handleSelectPlan = (plan: Plan) => {
-    setSelectedPlan(plan);
+  const handleSubscribe = async (plan: Plan) => {
+    try {
+      const token = storeService.getAuthToken();
+      const response = await fetch('/api/subscription/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ plan_id: plan.id }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erro ao assinar plano');
+
+      await reload();
+
+      // Abrir modal de pagamento automaticamente para a fatura recém-criada
+      if (data.invoice?.id) {
+        setSelectedInvoiceIds([data.invoice.id]);
+        setPaymentModalOpen(true);
+      }
+    } catch (err: any) {
+      console.error('Erro ao assinar plano:', err);
+    }
   };
 
   if (isLoading) {
@@ -35,11 +67,7 @@ export default function PlanosPage() {
           <SkeletonText className="h-5 w-96" />
         </div>
         <SkeletonCard className="h-48 mb-xl" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md mb-xl">
-          <SkeletonCard className="h-64" />
-          <SkeletonCard className="h-64" />
-          <SkeletonCard className="h-64" />
-        </div>
+        <SkeletonCard className="h-64 mb-xl" />
         <SkeletonCard className="h-48" />
       </div>
     );
@@ -61,58 +89,91 @@ export default function PlanosPage() {
     <div className="page-container max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-xl">
-        <h1 className="heading-primary">Planos & Assinatura</h1>
+        <h1 className="heading-primary">Planos & Faturas</h1>
         <p className="text-body text-secondary mt-xs">
-          Gerencie seu plano e acompanhe o uso do sistema
+          Gerencie sua assinatura e acompanhe suas faturas
         </p>
       </div>
 
-      {/* Plano atual + uso */}
+      {/* Banner de conta bloqueada */}
+      {!companyIsActive && (
+        <div className="bg-error/10 border border-error/20 rounded-xl p-md mb-xl flex items-start gap-sm">
+          <AlertOctagon className="w-6 h-6 text-error flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-body-lg font-semibold text-error">Conta Bloqueada</p>
+            <p className="text-body text-error/80">
+              Você tem {formatCurrency(pendingInvoices.reduce((s, i) => s + Number(i.amount), 0))} em faturas vencidas.
+              Regularize para reativar sua conta e continuar registrando vendas.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Plano atual */}
       {subscription ? (
         <div className="mb-xl">
-          <CurrentPlanCard subscription={subscription} />
+          <CurrentPlanCard
+            subscription={subscription}
+            companyIsActive={companyIsActive}
+            pendingInvoices={pendingInvoices}
+          />
         </div>
       ) : (
         <div className="mb-xl">
           <EmptyState
             icon={<CreditCard className="w-12 h-12" />}
             title="Sem assinatura"
-            description="Nenhuma assinatura ativa encontrada. Selecione um plano abaixo."
+            description="Assine um plano abaixo para começar a registrar vendas."
           />
         </div>
       )}
 
-      {/* Planos disponíveis */}
-      <div className="mb-xl">
-        <h2 className="section-title mb-md">Planos disponíveis</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
-          {plans.map((plan) => (
-            <PlanCard
-              key={plan.id}
-              plan={plan}
-              isCurrentPlan={subscription?.plan_id === plan.id}
-              isCancelled={subscription?.status === 'cancelled'}
-              onSelect={handleSelectPlan}
-            />
-          ))}
+      {/* Faturas pendentes */}
+      {pendingInvoices.length > 0 && (
+        <div className="mb-xl">
+          <h2 className="section-title mb-md">Faturas Pendentes</h2>
+          <PendingInvoicesTable
+            invoices={pendingInvoices}
+            selectedIds={selectedInvoiceIds}
+            onSelectionChange={setSelectedInvoiceIds}
+            onPayClick={() => setPaymentModalOpen(true)}
+            totalSelectedAmount={totalSelectedAmount}
+          />
         </div>
-      </div>
+      )}
 
-      {/* Histórico de pagamentos */}
+      {/* Planos disponíveis (sem assinatura ou assinatura cancelada) */}
+      {(!subscription || subscription.status === 'cancelled') && plans.length > 0 && (
+        <div className="mb-xl">
+          <h2 className="section-title mb-md">Assinar Plano</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+            {plans.map((plan) => (
+              <PlanCard
+                key={plan.id}
+                plan={plan}
+                isCurrentPlan={false}
+                isCancelled={false}
+                onSelect={handleSubscribe}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Histórico de faturas pagas */}
       <div>
-        <h2 className="section-title mb-md">Histórico de pagamentos</h2>
-        <PaymentHistoryTable payments={payments} />
+        <h2 className="section-title mb-md">Histórico de Faturas Pagas</h2>
+        <PaymentHistoryTable payments={paidInvoices} />
       </div>
 
       {/* Modal de pagamento */}
-      {selectedPlan && (
-        <PaymentModal
-          isOpen={!!selectedPlan}
-          onClose={() => setSelectedPlan(null)}
-          plan={selectedPlan}
-          currentSubscription={subscription}
-        />
-      )}
+      <PaymentModal
+        isOpen={paymentModalOpen && selectedInvoiceIds.length > 0}
+        onClose={() => setPaymentModalOpen(false)}
+        invoiceIds={selectedInvoiceIds}
+        totalAmount={totalSelectedAmount}
+        onPaymentComplete={reload}
+      />
     </div>
   );
 }

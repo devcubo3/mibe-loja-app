@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
-import { createCustomer } from '@/lib/asaas';
 
 export async function POST(request: NextRequest) {
   try {
@@ -127,28 +126,6 @@ export async function POST(request: NextRequest) {
         { error: 'Erro ao criar empresa. Tente novamente.' },
         { status: 500 }
       );
-    }
-
-    // Criar cliente no Asaas (non-blocking)
-    try {
-      const asaasResult = await createCustomer({
-        name: company.business_name.trim(),
-        cpfCnpj: cnpjClean,
-        email: user.email.trim().toLowerCase(),
-        externalReference: newCompany.id,
-        notificationDisabled: true,
-      });
-
-      if (asaasResult.success) {
-        await supabase
-          .from('companies')
-          .update({ asaas_customer_id: asaasResult.customer.id })
-          .eq('id', newCompany.id);
-      } else {
-        console.error(`Falha ao criar cliente Asaas para empresa ${newCompany.id}:`, asaasResult.error);
-      }
-    } catch (asaasError) {
-      console.error('Erro inesperado ao criar cliente Asaas:', asaasError);
     }
 
     // Fazer login para obter session tokens

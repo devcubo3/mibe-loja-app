@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './useAuth';
 import { storeService } from '@/services/storeService';
 import type { Plan, SubscriptionWithPlan, PaymentRecord, SubscriptionStatus } from '@/types/plan';
@@ -9,7 +9,10 @@ export function usePlans() {
   const { company } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<SubscriptionWithPlan | null>(null);
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [pendingInvoices, setPendingInvoices] = useState<PaymentRecord[]>([]);
+  const [paidInvoices, setPaidInvoices] = useState<PaymentRecord[]>([]);
+  const [companyIsActive, setCompanyIsActive] = useState(true);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,8 +47,8 @@ export function usePlans() {
       const data = await response.json();
 
       setPlans(data.plans || []);
+      setCompanyIsActive(data.company_is_active ?? true);
 
-      // Montar SubscriptionWithPlan se houver assinatura
       if (data.subscription && data.subscription.plans) {
         setSubscription({
           ...data.subscription,
@@ -56,7 +59,9 @@ export function usePlans() {
         setSubscription(null);
       }
 
-      setPayments(data.payments || []);
+      setPendingInvoices(data.pending_invoices || []);
+      setPaidInvoices(data.paid_invoices || []);
+      setSelectedInvoiceIds([]);
     } catch (err: any) {
       console.error('Erro ao carregar dados de planos:', err);
       setError(err.message || 'Erro ao carregar dados do plano');
@@ -69,23 +74,23 @@ export function usePlans() {
     loadAll();
   }, [loadAll]);
 
-  // Cálculos de uso
-  const usagePercent = subscription
-    ? Math.min((subscription.current_profile_count / subscription.plan.user_limit) * 100, 100)
-    : 0;
-
-  const isOverLimit = subscription
-    ? subscription.current_profile_count > subscription.plan.user_limit
-    : false;
+  const totalSelectedAmount = useMemo(() => {
+    return pendingInvoices
+      .filter(inv => selectedInvoiceIds.includes(inv.id))
+      .reduce((sum, inv) => sum + Number(inv.amount), 0);
+  }, [pendingInvoices, selectedInvoiceIds]);
 
   return {
     plans,
     subscription,
-    payments,
+    pendingInvoices,
+    paidInvoices,
+    companyIsActive,
     isLoading,
     error,
-    usagePercent,
-    isOverLimit,
+    selectedInvoiceIds,
+    setSelectedInvoiceIds,
+    totalSelectedAmount,
     reload: loadAll,
   };
 }

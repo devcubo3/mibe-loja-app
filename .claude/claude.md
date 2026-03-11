@@ -1,1 +1,0 @@
-leia o arquivo README.md, depois siga o 00-ROTEIRO-IMPLEMENTACAO.md

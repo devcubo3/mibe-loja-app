@@ -7,11 +7,12 @@ export type PaymentMethod = 'PIX' | 'CREDIT_CARD';
 
 // Etapas do modal de pagamento (máquina de estados)
 export type PaymentStep =
-    | 'select-method'    // Escolha do método (PIX ou Cartão)
-    | 'processing'       // Gerando cobrança
-    | 'pix-display'      // Exibindo QR Code PIX
-    | 'redirect-card'    // Redirecionando para checkout
-    | 'error';           // Erro
+    | 'select-method'      // Escolha do método (PIX ou Cartão)
+    | 'processing'         // Gerando cobrança
+    | 'pix-display'        // Exibindo QR Code PIX (com polling)
+    | 'payment-confirmed'  // Pagamento confirmado
+    | 'redirect-card'      // Redirecionando para checkout
+    | 'error';             // Erro
 
 // Dados do PIX para exibição
 export interface PixData {
@@ -20,9 +21,9 @@ export interface PixData {
     expirationDate: string;
 }
 
-// Request para criar pagamento
+// Request para criar pagamento (uma ou mais faturas selecionadas)
 export interface CreatePaymentRequest {
-    plan_id: string;
+    payment_history_ids: string[];
     billing_type: PaymentMethod;
 }
 

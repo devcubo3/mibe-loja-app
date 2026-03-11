@@ -20,7 +20,7 @@
 * **Componentes UI:** Componentes customizados em `components/ui/`
 * **Gerenciamento de Estado:** Zustand (Dados da Loja e Sessão do Usuário)
 * **Ícones:** `lucide-react`
-* **Backend:** Supabase (Auth, Database, Storage via `@supabase/ssr`)
+* **Backend:** Supabase (Auth via `auth.users`, Database, Storage via `@supabase/supabase-js`)
 * **Validação:** Zod + React Hook Form
 * **Utilitários:** clsx, tailwind-merge, date-fns
 
@@ -40,7 +40,7 @@
 ### B. Gestão de Vendas & Cashback
 
 * **Registro de Venda:** Campo rápido para digitar o CPF do cliente e o valor da compra para aplicar o cashback.
-* **Validação de Resgate:** Tela para ler QR Code ou digitar código de autorização para o cliente usar o saldo.
+* **Validação de Resgate:** Tela para ler QR Code do cliente ou buscar por CPF para aplicar o resgate do saldo de cashback.
 * **Histórico de Movimentações:** Filtros por data e por funcionário que realizou a operação.
 
 ### C. Configurações do Estabelecimento (Empresa)
@@ -50,7 +50,8 @@
 * *Nota: Edição limitada para não quebrar regras contratuais sem aviso ao MIBE Admin.*
 * **Horários e Contato:** Edição de informações que aparecem para o cliente final no App.
 * **Upload de Mídia:** Logo, capa e galeria de fotos do estabelecimento.
-* **Avaliações:** Visualização das avaliações dos clientes.
+* **Avaliações:** Visualização das avaliações dos clientes. A empresa pode responder às avaliações, mas não editar a nota atribuída pelo cliente.
+* **Localização:** Mapa interativo (react-leaflet) para definir e editar as coordenadas geográficas do estabelecimento.
 
 ### D. Gestão de Clientes
 
@@ -71,21 +72,62 @@
 * **Foto de Perfil:** Upload de foto do usuário.
 * **Logout:** Confirmação antes de sair.
 
-### G. Suporte
+### G. Onboarding
+
+* **Fluxo Inicial:** Modal guiado exibido ao primeiro acesso após o cadastro para configurar os dados essenciais da loja (nome, categoria, regras de cashback).
+* **Flag de Controle:** Campo `onboarding_completed` na tabela `profiles`. Enquanto `false`, o modal é exibido ao entrar no dashboard.
+* **Etapas:** Informações básicas → Regras de cashback → Confirmação.
+
+### H. Suporte
 
 * **Central de Ajuda:** Acesso a suporte e FAQ.
 * **Contato:** Canais de comunicação com o MIBE.
 
-### H. Planos & Assinatura
+### I. Planos & Faturas
 
-* **Plano Atual:** Card destacado com o plano ativo, mostrando nome, preço mensal e limite de clientes.
-* **Uso de Clientes:** Barra de progresso visual indicando `current_profile_count / user_limit`. Muda de cor ao se aproximar do limite (verde → amarelo → vermelho).
-* **Excedentes:** Caso o limite seja ultrapassado, exibe quantidade de perfis excedentes e o valor adicional cobrado (`excess_profiles × excess_user_fee`).
-* **Listagem de Planos:** Cards comparativos lado a lado com todos os planos disponíveis (`is_active = true`), destacando o plano atual. Informações: nome, descrição, preço, limite de usuários e taxa de excedente.
-* **Troca de Plano:** Botão para selecionar um novo plano, com modal de confirmação mostrando o impacto (novo limite, recálculo de excedentes).
-* **Histórico de Pagamentos:** Tabela com faturas mensais da assinatura, exibindo: mês de referência, valor base, valor excedente, total, data de vencimento e status (Pendente / Pago / Falhou / Reembolsado).
-* **Status da Assinatura:** Badge indicando o status (`active`, `overdue`, `cancelled`). Se `overdue`, exibir alerta visual com orientação de regularização.
-* *Nota: A troca de plano pela loja é registrada e o recálculo de excedentes é automático (via triggers no banco). O processamento do pagamento será integrado com gateway externo em fase futura.*
+O sistema de planos é **único** — não há múltiplos planos para escolher. O lojista assina o plano diretamente no app (self-service) para poder registrar vendas. O modelo de cobrança é composto por:
+
+1. **Mensalidade fixa** — valor definido pelo painel ADMIN.
+2. **Comissão diária** — percentual sobre o valor total das vendas do dia, também definido pelo ADMIN.
+
+#### Estrutura da aba "Planos"
+
+* **Card de Status do Plano:** plano ativo, data de vencimento da mensalidade e % de comissão vigente.
+* **Banner de Conta Bloqueada** (quando aplicável): alerta vermelho com total vencido e CTA para pagar.
+* **Lista de Faturas Pendentes/Vencidas:** com checkbox para seleção individual ou em lote.
+* **Botão "Pagar Selecionadas":** aparece ao selecionar faturas; exibe o total somado e abre modal de pagamento.
+* **Modal de Pagamento:** opções PIX e Cartão de Crédito via **AbacatePay**.
+* **Histórico de Faturas Pagas:** lista das faturas quitadas com data, método e valor.
+
+#### Tipos de fatura
+
+| Tipo | Geração | Valor | Vencimento |
+|---|---|---|---|
+| `MENSALIDADE` | Mensal | Valor fixo (ADMIN) | 7 dias após geração |
+| `COMISSAO_DIARIA` | Na 1ª venda do dia; fecha às 00:00 | Σ(valor_venda × % comissão) | 7 dias após geração |
+
+#### Fluxo de inadimplência
+
+* Fatura vencida há **+3 dias** → conta desativada automaticamente (`company.is_active = false`).
+* Ao quitar as faturas → conta reativada automaticamente (`company.is_active = true`).
+
+#### Fluxo de registro de venda com gate de plano
+
+```
+Lojista tenta registrar venda
+        ↓
+Tem plano ativo?
+  └─ NÃO → Bloquear + CTA para assinar plano
+        ↓
+Conta ativa? (is_active = true)
+  └─ NÃO → Bloquear + CTA para pagar faturas vencidas
+        ↓
+Venda registrada
+        ↓
+Fatura COMISSAO_DIARIA aberta para hoje?
+  ├─ SIM → Atualizar valor
+  └─ NÃO → Criar nova fatura do dia
+```
 
 ---
 
@@ -128,9 +170,11 @@ MIBE Business
 ```text
 src/
 ├── app/
-│   ├── (auth)/              # Login / Recuperação de Senha
+│   ├── (auth)/              # Autenticação (não requer login)
 │   │   ├── login/
-│   │   └── esqueci-senha/
+│   │   ├── criar-conta/
+│   │   ├── esqueci-senha/
+│   │   └── redefinir-senha/
 │   ├── (dashboard)/         # Layout com Sidebar + Rotas Protegidas
 │   │   ├── page.tsx         # Home/Dashboard
 │   │   ├── registrar-venda/
@@ -143,6 +187,8 @@ src/
 │   │   ├── notificacoes/
 │   │   ├── minha-conta/
 │   │   └── suporte/
+│   ├── offline/             # Página de fallback offline (PWA)
+│   ├── politicas/           # Políticas e Termos de Uso
 │   ├── globals.css
 │   └── layout.tsx
 ├── components/
@@ -156,7 +202,9 @@ src/
 │   ├── plans/               # Componentes de planos (PlanCard, PlanComparison, PaymentHistory)
 │   ├── register-sale/       # Componentes de registro de venda (SaleForm, QRScanner)
 │   ├── minha-conta/         # Componentes de conta (ChangePasswordModal)
-│   └── notifications/       # Componentes de notificações
+│   ├── notifications/       # Componentes de notificações
+│   ├── onboarding/          # Fluxo de configuração inicial (OnboardingModal)
+│   └── pwa/                 # Componentes PWA (InstallPrompt)
 ├── hooks/                   # useAuth, useSales, useCustomers, useNotifications, usePlans
 ├── lib/                     # Utilitários (formatters, utils)
 ├── types/                   # TypeScript types (auth, customer, sale, store, plan, user)
@@ -172,8 +220,11 @@ src/
 1. **Segurança de Transação:** O lançamento de cashback exige obrigatoriamente um valor de venda real vinculado.
 2. **Limite de Resgate:** O sistema não deve permitir resgates que excedam o saldo de cashback do cliente ou o limite de uso por compra definido no Admin.
 3. **Responsividade:** O painel deve ser **Mobile Friendly**, pois muitos donos de estabelecimentos acessam via tablet ou smartphone no balcão.
-4. **Limite de Plano:** Empresas com assinatura `cancelled` não podem registrar novas vendas. Empresas com status `overdue` recebem alertas visuais mas continuam operando.
-5. **Cálculo de Excedentes:** O controle de perfis excedentes é automático via triggers no banco de dados. Ao surgir um novo cliente ou ao trocar de plano, os valores são recalculados instantaneamente.
+4. **Gate de Plano:** O lojista só pode registrar vendas se tiver plano ativo **e** conta ativa (`company.is_active = true`).
+5. **Bloqueio por Inadimplência:** Faturas vencidas há mais de 3 dias desativam a conta automaticamente. O pagamento das faturas reativa a conta automaticamente.
+6. **Comissão sobre valor pago:** A comissão é calculada sobre o valor total da venda, não sobre o cashback gerado.
+7. **Fatura diária única:** Um único registro de `COMISSAO_DIARIA` por dia por empresa. Abre na 1ª venda e fecha à meia-noite (00:00).
+8. **Dados do cliente são somente leitura:** A loja pode visualizar mas nunca editar dados de clientes.
 
 ---
 
@@ -182,7 +233,7 @@ src/
 Para garantir que o painel funcione como um aplicativo instalado, adicionaremos:
 
 * **Manifest:** Configuração do `manifest.json` para definir ícone, cor do tema e modo de exibição `standalone` (sem a barra de endereços do navegador).
-* **Service Workers:** Utilização do `next-pwa` para caching estratégico, permitindo que o app abra instantaneamente mesmo com conexão instável.
+* **Service Workers:** Utilização do **Serwist** (substituto moderno do next-pwa) para caching estratégico, permitindo que o app abra instantaneamente mesmo com conexão instável.
 * **Offline Support:** Página de fallback caso o lojista perca a conexão no meio de uma consulta.
 * **Acesso Rápido:** Implementação de "Web App Install Prompt" para incentivar o lojista a adicionar o ícone à tela de início.
 
@@ -194,7 +245,7 @@ Como o foco é o uso no balcão, a interface sofrerá estas adaptações:
 
 * **Touch Targets:** Botões e campos de entrada com altura mínima de `44px` para facilitar o toque.
 * **Navegação Mobile:** No celular, o menu lateral se transforma em uma **Bottom Tab Bar** (barra inferior) para facilitar o alcance do polegar.
-* **Input Numérico:** O campo de valor da venda abrirá automaticamente o teclado numérico (`inputmode="decimal"`) para agilizar a operação.
+* **Input Numérico:** Campos de valor monetário utilizam `inputmode="decimal"` para abrir automaticamente o teclado numérico no mobile.
 
 ---
 
@@ -202,10 +253,10 @@ Como o foco é o uso no balcão, a interface sofrerá estas adaptações:
 
 Considerando o uso mobile no estabelecimento:
 
-1. **Acesso Rápido:** O botão de "Nova Venda" será um **FAB (Floating Action Button)** no canto inferior direito.
-2. **Identificação:** O lojista digita o CPF (com máscara automática).
-3. **Valor:** Campo de valor grande e centralizado.
-4. **Feedback:** Notificação sonora ou hápica (vibração) ao confirmar o sucesso do cashback (usando a WebVitals API).
+1. **Acesso Rápido:** O botão de "Nova Venda" está disponível via QuickActions no dashboard e no menu de navegação inferior (MobileNav) no mobile.
+2. **Identificação:** O lojista escaneia o QR Code do cliente ou digita o CPF (com máscara automática).
+3. **Valor:** Campo de valor grande e centralizado com teclado numérico automático (`inputmode="decimal"`).
+4. **Feedback:** Toast de confirmação visual ao registrar o cashback com sucesso (via sonner).
 
 ---
 
@@ -214,7 +265,6 @@ Considerando o uso mobile no estabelecimento:
 ### Produção
 * `next` ^14.2.0
 * `react` / `react-dom` ^18.3.0
-* `@supabase/ssr` ^0.8.0
 * `@supabase/supabase-js` ^2.90.1
 * `zustand` ^5.0.10
 * `lucide-react` ^0.562.0
@@ -224,8 +274,12 @@ Considerando o uso mobile no estabelecimento:
 * `date-fns` ^4.1.0
 * `clsx` ^2.1.1
 * `tailwind-merge` ^3.4.0
+* `sonner` (Toasts de notificação)
 * `html5-qrcode` ^2.3.8 (Scanner de QR Code)
-* `next-pwa` ^5.6.0
+* `react-leaflet` (Mapa interativo de localização da loja)
+* `bcryptjs` (Hashing de senhas, server-side)
+* `serwist` (Service Workers / PWA — substituto do next-pwa)
+* `abacatepay-nodejs` (Gateway de pagamento AbacatePay)
 
 ### Desenvolvimento
 * `typescript` ^5.4.0
@@ -234,3 +288,51 @@ Considerando o uso mobile no estabelecimento:
 
 ---
 
+## 11. Comandos Úteis de Desenvolvimento
+
+### NPM
+```bash
+npm install            # instalar dependências
+npm run dev            # servidor de desenvolvimento (http://localhost:3000)
+npm run build          # build de produção
+npm run start          # iniciar servidor de produção
+npm run lint           # verificar código
+npm run lint -- --fix  # corrigir automaticamente
+```
+
+### Supabase
+```bash
+supabase login
+supabase gen types typescript --project-id "uipvhxgjaungdetwojou" --schema public > src/types/database.ts
+supabase start   # supabase local
+supabase stop
+supabase status
+```
+
+### Git
+```bash
+git status
+git add <arquivos>
+git commit -m "mensagem"
+git push
+git checkout -b nome-da-branch
+git merge nome-da-branch
+```
+
+### Debugging
+```bash
+rm -rf .next                                           # limpar cache do Next.js
+rm -rf node_modules package-lock.json && npm install  # reinstalar dependências
+npx next info                                         # informações do Next.js
+```
+
+### PWA (só funciona em produção)
+```bash
+npm run build && npm run start
+```
+
+### Portas em uso (Windows)
+```bash
+netstat -ano | findstr :3000
+taskkill /PID [número] /F
+```

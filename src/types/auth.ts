@@ -19,6 +19,7 @@ export interface CompanyData {
   logo_url: string | null;
   cover_url: string | null;
   status: 'active' | 'inactive' | 'pending' | null;
+  is_active: boolean;
   cashback_percent: number;
   min_purchase_value: number;
   has_expiration: boolean;

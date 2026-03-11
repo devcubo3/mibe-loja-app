@@ -25,10 +25,6 @@ export function ChangePlanModal({
   const currentPlan = currentSubscription.plan;
   const isUpgrade = newPlan.monthly_price > currentPlan.monthly_price;
 
-  // Estimar novo excedente com o novo plano
-  const newExcessProfiles = Math.max(0, currentSubscription.current_profile_count - newPlan.user_limit);
-  const newExcessAmount = newExcessProfiles * newPlan.excess_user_fee;
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Confirmar troca de plano">
       <div className="space-y-lg">
@@ -49,41 +45,12 @@ export function ChangePlanModal({
           </div>
         </div>
 
-        {/* Detalhes do impacto */}
-        <div className="space-y-sm">
-          <div className="flex justify-between py-sm border-b border-input-border">
-            <span className="text-body text-secondary">Novo limite de clientes</span>
-            <span className="text-body font-semibold text-primary">{newPlan.user_limit}</span>
-          </div>
-          <div className="flex justify-between py-sm border-b border-input-border">
-            <span className="text-body text-secondary">Clientes atuais</span>
-            <span className="text-body font-semibold text-primary">{currentSubscription.current_profile_count}</span>
-          </div>
-          {newExcessProfiles > 0 && (
-            <div className="flex justify-between py-sm border-b border-input-border">
-              <span className="text-body text-error">Excedentes estimados</span>
-              <span className="text-body font-semibold text-error">
-                {newExcessProfiles} clientes (+{formatCurrency(newExcessAmount)})
-              </span>
-            </div>
-          )}
-          <div className="flex justify-between py-sm">
-            <span className="text-body text-secondary">Tipo de alteração</span>
-            <span className={`text-body font-semibold ${isUpgrade ? 'text-success' : 'text-warning'}`}>
-              {isUpgrade ? 'Upgrade' : 'Downgrade'}
-            </span>
-          </div>
+        <div className="flex justify-between py-sm">
+          <span className="text-body text-secondary">Tipo de alteração</span>
+          <span className={`text-body font-semibold ${isUpgrade ? 'text-success' : 'text-warning'}`}>
+            {isUpgrade ? 'Upgrade' : 'Downgrade'}
+          </span>
         </div>
-
-        {/* Aviso de downgrade com excedentes */}
-        {!isUpgrade && newExcessProfiles > 0 && (
-          <div className="bg-warning-light border border-warning/20 rounded-xl p-md">
-            <p className="text-body text-warning">
-              Com este plano, você terá {newExcessProfiles} clientes acima do limite,
-              gerando um custo adicional de {formatCurrency(newExcessAmount)}/mês.
-            </p>
-          </div>
-        )}
 
         {/* Botões */}
         <div className="flex gap-md">

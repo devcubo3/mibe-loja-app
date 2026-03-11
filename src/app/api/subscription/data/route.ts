@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const supabaseAdmin = getSupabaseAdmin();
 
     // Buscar tudo em paralelo
-    const [plansResult, subscriptionResult] = await Promise.all([
+    const [plansResult, subscriptionResult, companyResult] = await Promise.all([
       supabaseAdmin
         .from('plans')
         .select('*')
@@ -22,6 +22,15 @@ export async function GET(request: NextRequest) {
         .from('subscriptions')
         .select('*, plans(*)')
         .eq('company_id', companyId)
+        .neq('status', 'cancelled')
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+
+      supabaseAdmin
+        .from('companies')
+        .select('is_active')
+        .eq('id', companyId)
         .single(),
     ]);
 
@@ -30,15 +39,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao buscar planos' }, { status: 500 });
     }
 
-    // Subscription pode não existir (PGRST116)
-    const subscription = subscriptionResult.error?.code === 'PGRST116'
-      ? null
-      : subscriptionResult.error
-        ? null
-        : subscriptionResult.data;
+    const subscription = subscriptionResult.error ? null : subscriptionResult.data;
 
-    // Buscar histórico de pagamentos se houver assinatura
-    let payments: any[] = [];
+    let pendingInvoices: any[] = [];
+    let paidInvoices: any[] = [];
+
+    // Faturas da assinatura ativa (mensalidades + histórico pago)
     if (subscription) {
       const { data: paymentsData, error: paymentsError } = await supabaseAdmin
         .from('payment_history')
@@ -47,14 +53,52 @@ export async function GET(request: NextRequest) {
         .order('due_date', { ascending: false });
 
       if (!paymentsError && paymentsData) {
-        payments = paymentsData;
+        pendingInvoices = paymentsData.filter(p => p.status === 'pending' || p.status === 'overdue');
+        paidInvoices = paymentsData.filter(p => p.status === 'paid');
       }
+    }
+
+    // Comissões diárias pendentes de assinaturas anteriores (dívidas reais de vendas)
+    const activeSubId = subscription?.id;
+    const { data: oldCommissions } = await supabaseAdmin
+      .from('payment_history')
+      .select('id, subscription_id, amount, status, due_date, type, commission_date, gateway_reference, payment_date, created_at, subscriptions!inner(company_id)')
+      .eq('subscriptions.company_id', companyId)
+      .eq('type', 'COMISSAO_DIARIA')
+      .in('status', ['pending', 'overdue'])
+      .order('due_date', { ascending: false });
+
+    if (oldCommissions) {
+      const currentSubCommissionIds = new Set(pendingInvoices.map((p: any) => p.id));
+      const extraCommissions = oldCommissions
+        .filter((c: any) => !currentSubCommissionIds.has(c.id))
+        .map(({ subscriptions: _sub, ...rest }: any) => rest);
+      pendingInvoices = [...pendingInvoices, ...extraCommissions];
+    }
+
+    // COMISSAO_DIARIA pagas de TODAS as assinaturas da empresa
+    const { data: paidCommissions } = await supabaseAdmin
+      .from('payment_history')
+      .select('id, subscription_id, amount, status, due_date, type, commission_date, gateway_reference, payment_date, created_at, subscriptions!inner(company_id)')
+      .eq('subscriptions.company_id', companyId)
+      .eq('type', 'COMISSAO_DIARIA')
+      .eq('status', 'paid')
+      .order('due_date', { ascending: false });
+
+    if (paidCommissions) {
+      const currentSubPaidIds = new Set(paidInvoices.map((p: any) => p.id));
+      const extraPaid = paidCommissions
+        .filter((c: any) => !currentSubPaidIds.has(c.id))
+        .map(({ subscriptions: _sub, ...rest }: any) => rest);
+      paidInvoices = [...paidInvoices, ...extraPaid];
     }
 
     return NextResponse.json({
       plans: plansResult.data || [],
       subscription,
-      payments,
+      pending_invoices: pendingInvoices,
+      paid_invoices: paidInvoices,
+      company_is_active: companyResult.data?.is_active ?? true,
     });
   } catch (error) {
     console.error('Erro interno:', error);
