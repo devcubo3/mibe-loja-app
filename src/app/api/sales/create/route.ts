@@ -99,9 +99,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('Erro ao inserir transação:', insertError);
+      console.error('Erro ao inserir transação:', JSON.stringify(insertError));
       return NextResponse.json(
-        { error: 'Erro ao registrar venda' },
+        { error: 'Erro ao registrar venda', detail: insertError.message, code: insertError.code },
         { status: 500 }
       );
     }
@@ -134,9 +134,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, sale });
   } catch (error) {
-    console.error('Erro interno:', error);
+    console.error('Erro interno ao registrar venda:', error instanceof Error ? { message: error.message, stack: error.stack } : error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { error: 'Erro interno do servidor', detail: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
