@@ -225,6 +225,7 @@ export default function RegisterSalePage() {
         cashback_redeemed: data.balanceUsed,
         net_amount_paid: data.amountPaid,
         cashback_earned: data.cashbackGenerated,
+        payment_method: data.paymentMethod,
       });
       if (result.success && result.sale) {
         setSale(result.sale);

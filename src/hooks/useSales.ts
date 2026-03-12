@@ -65,6 +65,7 @@ export function useSales() {
         net_amount_paid: t.net_amount_paid,
         cashback_earned: t.cashback_earned,
         admin_fee_amount: t.admin_fee_amount,
+        payment_method: t.payment_method || 'dinheiro',
         created_at: t.created_at,
         customer: t.profiles ? {
           id: t.profiles.id,
@@ -141,6 +142,7 @@ export function useSales() {
         net_amount_paid: t.net_amount_paid,
         cashback_earned: t.cashback_earned,
         admin_fee_amount: t.admin_fee_amount,
+        payment_method: t.payment_method || 'dinheiro',
         created_at: t.created_at,
         customer: t.profiles ? {
           id: t.profiles.id,
@@ -209,6 +211,7 @@ export function useSales() {
         net_amount_paid: data.net_amount_paid,
         cashback_earned: data.cashback_earned,
         admin_fee_amount: data.admin_fee_amount,
+        payment_method: data.payment_method || 'dinheiro',
         created_at: data.created_at,
         customer: (data as any).profiles ? {
           id: (data as any).profiles.id,
@@ -249,6 +252,7 @@ export function useSales() {
           cashback_redeemed: data.cashback_redeemed,
           net_amount_paid: data.net_amount_paid,
           cashback_earned: data.cashback_earned,
+          payment_method: data.payment_method,
         }),
       });
 

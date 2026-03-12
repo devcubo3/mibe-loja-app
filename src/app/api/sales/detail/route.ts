@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         net_amount_paid,
         cashback_earned,
         admin_fee_amount,
+        payment_method,
         created_at,
         profiles:user_id (
           id,

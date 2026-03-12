@@ -516,6 +516,7 @@ export type Database = {
           created_at: string | null
           id: string
           net_amount_paid: number
+          payment_method: string
           total_amount: number
           user_id: string | null
         }
@@ -527,6 +528,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           net_amount_paid: number
+          payment_method?: string
           total_amount: number
           user_id?: string | null
         }
@@ -538,6 +540,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           net_amount_paid?: number
+          payment_method?: string
           total_amount?: number
           user_id?: string | null
         }

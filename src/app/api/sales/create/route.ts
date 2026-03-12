@@ -12,7 +12,10 @@ export async function POST(request: NextRequest) {
 
     // Validar body
     const body = await request.json();
-    const { user_id, total_amount, cashback_redeemed, net_amount_paid, cashback_earned } = body;
+    const { user_id, total_amount, cashback_redeemed, net_amount_paid, cashback_earned, payment_method } = body;
+
+    const validPaymentMethods = ['dinheiro', 'pix', 'credito', 'debito'];
+    const finalPaymentMethod = validPaymentMethods.includes(payment_method) ? payment_method : 'dinheiro';
 
     if (!user_id) {
       return NextResponse.json({ error: 'ID do cliente é obrigatório' }, { status: 400 });
@@ -75,6 +78,7 @@ export async function POST(request: NextRequest) {
         cashback_redeemed: cashback_redeemed || 0,
         net_amount_paid,
         cashback_earned,
+        payment_method: finalPaymentMethod,
       })
       .select(`
         id,
@@ -85,6 +89,7 @@ export async function POST(request: NextRequest) {
         net_amount_paid,
         cashback_earned,
         admin_fee_amount,
+        payment_method,
         created_at,
         profiles:user_id (
           id,
@@ -118,6 +123,7 @@ export async function POST(request: NextRequest) {
       net_amount_paid: newSale.net_amount_paid,
       cashback_earned: newSale.cashback_earned,
       admin_fee_amount: newSale.admin_fee_amount,
+      payment_method: newSale.payment_method || 'dinheiro',
       created_at: newSale.created_at,
       customer: (newSale as any).profiles
         ? {

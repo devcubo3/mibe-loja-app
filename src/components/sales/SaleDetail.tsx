@@ -7,8 +7,15 @@ import {
   formatCurrency,
   formatDateTime,
 } from '@/lib/formatters';
-import { User } from 'lucide-react';
-import type { SaleWithCustomer } from '@/types/sale';
+import { User, Banknote, QrCode, CreditCard } from 'lucide-react';
+import type { SaleWithCustomer, PaymentMethodType } from '@/types/sale';
+
+const PAYMENT_METHOD_LABELS: Record<PaymentMethodType, { label: string; icon: React.ReactNode }> = {
+  dinheiro: { label: 'Dinheiro', icon: <Banknote className="w-4 h-4" /> },
+  pix: { label: 'PIX', icon: <QrCode className="w-4 h-4" /> },
+  credito: { label: 'Cartão de Crédito', icon: <CreditCard className="w-4 h-4" /> },
+  debito: { label: 'Cartão de Débito', icon: <CreditCard className="w-4 h-4" /> },
+};
 
 interface SaleDetailProps {
   sale: SaleWithCustomer;
@@ -90,6 +97,16 @@ export function SaleDetail({ sale }: SaleDetailProps) {
               value={`+ ${formatCurrency(sale.cashback_earned || 0)}`}
               valueClass="text-success"
             />
+
+            <div className="h-px bg-input-border" />
+
+            <div className="flex items-center justify-between">
+              <span className="text-body text-text-secondary">Forma de pagamento</span>
+              <span className="flex items-center gap-xs text-body font-medium">
+                {PAYMENT_METHOD_LABELS[sale.payment_method || 'dinheiro']?.icon}
+                {PAYMENT_METHOD_LABELS[sale.payment_method || 'dinheiro']?.label || 'Dinheiro'}
+              </span>
+            </div>
           </div>
         </Card>
       </div>

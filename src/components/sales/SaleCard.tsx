@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Banknote, QrCode, CreditCard } from 'lucide-react';
 import { Avatar, Badge, Card } from '@/components/ui';
 import {
   formatCPF,
@@ -9,7 +9,14 @@ import {
   formatDate,
   formatTime,
 } from '@/lib/formatters';
-import type { SaleWithCustomer } from '@/types/sale';
+import type { SaleWithCustomer, PaymentMethodType } from '@/types/sale';
+
+const PAYMENT_ICONS: Record<PaymentMethodType, { icon: React.ReactNode; label: string }> = {
+  dinheiro: { icon: <Banknote className="w-3.5 h-3.5" />, label: 'Dinheiro' },
+  pix: { icon: <QrCode className="w-3.5 h-3.5" />, label: 'PIX' },
+  credito: { icon: <CreditCard className="w-3.5 h-3.5" />, label: 'Crédito' },
+  debito: { icon: <CreditCard className="w-3.5 h-3.5" />, label: 'Débito' },
+};
 
 interface SaleCardProps {
   sale: SaleWithCustomer;
@@ -77,6 +84,11 @@ export function SaleCard({ sale }: SaleCardProps) {
               <Badge variant="success">
                 +{formatCurrency(sale.cashback_earned || 0)}
               </Badge>
+            </div>
+
+            <div className="flex items-center gap-xs text-caption text-text-muted">
+              {PAYMENT_ICONS[sale.payment_method || 'dinheiro']?.icon}
+              <span>{PAYMENT_ICONS[sale.payment_method || 'dinheiro']?.label || 'Dinheiro'}</span>
             </div>
           </div>
 

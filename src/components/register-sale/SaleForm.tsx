@@ -9,7 +9,9 @@ import {
   parseCurrencyInput,
   formatCPF,
 } from '@/lib/formatters';
+import { Banknote, QrCode, CreditCard } from 'lucide-react';
 import type { CustomerWithBalance } from '@/types/customer';
+import type { PaymentMethodType } from '@/types/sale';
 
 interface SaleFormProps {
   customer: CustomerWithBalance;
@@ -24,7 +26,15 @@ export interface SaleData {
   balanceUsed: number;
   amountPaid: number;
   cashbackGenerated: number;
+  paymentMethod: PaymentMethodType;
 }
+
+const PAYMENT_METHODS: { value: PaymentMethodType; label: string; icon: React.ReactNode }[] = [
+  { value: 'dinheiro', label: 'Dinheiro', icon: <Banknote className="w-4 h-4" /> },
+  { value: 'pix', label: 'PIX', icon: <QrCode className="w-4 h-4" /> },
+  { value: 'credito', label: 'Crédito', icon: <CreditCard className="w-4 h-4" /> },
+  { value: 'debito', label: 'Débito', icon: <CreditCard className="w-4 h-4" /> },
+];
 
 export function SaleForm({
   customer,
@@ -36,6 +46,7 @@ export function SaleForm({
   const [purchaseValue, setPurchaseValue] = useState('');
   const [useBalance, setUseBalance] = useState(false);
   const [balanceAmount, setBalanceAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('dinheiro');
   const [error, setError] = useState<string | null>(null);
 
   const purchaseAmount = parseCurrencyInput(purchaseValue);
@@ -87,6 +98,7 @@ export function SaleForm({
       balanceUsed,
       amountPaid,
       cashbackGenerated,
+      paymentMethod,
     });
   };
 
@@ -144,6 +156,30 @@ export function SaleForm({
             </div>
           )}
         </Card>
+      )}
+
+      {/* Payment Method */}
+      {purchaseAmount > 0 && (
+        <div>
+          <p className="text-body font-medium mb-sm">Forma de pagamento</p>
+          <div className="grid grid-cols-2 gap-sm">
+            {PAYMENT_METHODS.map((method) => (
+              <button
+                key={method.value}
+                type="button"
+                onClick={() => setPaymentMethod(method.value)}
+                className={`flex items-center gap-sm p-md rounded-md border transition-colors ${
+                  paymentMethod === method.value
+                    ? 'border-primary bg-primary/5 text-primary font-medium'
+                    : 'border-input-border bg-card-bg text-text-secondary hover:border-text-muted'
+                }`}
+              >
+                {method.icon}
+                <span className="text-body">{method.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Summary */}

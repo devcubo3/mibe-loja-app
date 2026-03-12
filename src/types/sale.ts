@@ -1,3 +1,5 @@
+export type PaymentMethodType = 'dinheiro' | 'pix' | 'credito' | 'debito';
+
 // Tipos baseados na estrutura real do banco de dados (transactions)
 export interface Sale {
   id: string;
@@ -8,6 +10,7 @@ export interface Sale {
   net_amount_paid: number;
   cashback_earned: number;
   admin_fee_amount: number | null;
+  payment_method: PaymentMethodType;
   created_at: string | null;
 }
 
@@ -47,6 +50,7 @@ export interface CreateSaleData {
   cashback_redeemed: number;
   net_amount_paid: number;
   cashback_earned: number;
+  payment_method: PaymentMethodType;
 }
 
 // Filtros para buscar vendas
