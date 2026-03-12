@@ -52,9 +52,10 @@ async function createCardCheckout(apiKey: string, params: {
   externalId: string;
   returnUrl: string;
   completionUrl: string;
+  customer?: { name: string; email: string; taxId: string; cellphone: string };
   metadata?: Record<string, string>;
 }) {
-  const body = {
+  const body: Record<string, unknown> = {
     frequency: "ONE_TIME",
     methods: ["CARD"],
     products: [{
@@ -67,13 +68,19 @@ async function createCardCheckout(apiKey: string, params: {
     completionUrl: params.completionUrl,
     metadata: params.metadata,
   };
+  if (params.customer) {
+    body.customer = params.customer;
+  }
   const res = await fetch(`${ABACATEPAY_BASE_URL}/billing/create`, {
     method: "POST",
     headers: abacateHeaders(apiKey),
     body: JSON.stringify(body),
   });
   const json = await res.json();
-  if (!res.ok || json.error) throw new Error(json.error || "Erro ao criar checkout");
+  if (!res.ok || json.error) {
+    console.error("AbacatePay billing/create error:", JSON.stringify(json));
+    throw new Error(json.error || "Erro ao criar checkout");
+  }
   return json.data as { id: string; url: string; status: string };
 }
 
@@ -136,7 +143,7 @@ Deno.serve(async (req) => {
   const companyId = companyData.id;
 
   // ── Body ──────────────────────────────────────────────────────────────────────
-  let body: { payment_history_ids?: string[]; billing_type?: string };
+  let body: { payment_history_ids?: string[]; billing_type?: string; app_url?: string };
   try {
     body = await req.json();
   } catch {
@@ -218,6 +225,13 @@ Deno.serve(async (req) => {
     });
   }
 
+  // ── Buscar dados do owner para customer do billing ─────────────────────────
+  const { data: ownerProfile } = await supabaseAdmin
+    .from("profiles")
+    .select("full_name, cpf, phone")
+    .eq("id", user.id)
+    .single();
+
   const invoiceCount = invoices.length;
   const description = `${invoiceCount} fatura${invoiceCount > 1 ? "s" : ""} - ${company.business_name}`;
   const externalId = `company_${companyId}_invoices_${payment_history_ids.join("_")}`;
@@ -263,13 +277,26 @@ Deno.serve(async (req) => {
     }
 
     // ── CARTÃO ─────────────────────────────────────────────────────────────────
-    const appUrl = Deno.env.get("APP_URL") || "";
+    const ALLOWED_ORIGINS = [
+      "https://app.mibeapp.com.br",
+      "https://app.mibeapp.com",
+      "http://localhost:3000",
+    ];
+    const appUrl = (body.app_url && ALLOWED_ORIGINS.includes(body.app_url))
+      ? body.app_url
+      : Deno.env.get("APP_URL") || "";
     const billing = await createCardCheckout(apiKey, {
       amount: totalCentavos,
       description,
       externalId,
       returnUrl: `${appUrl}/planos`,
       completionUrl: `${appUrl}/planos?payment=success`,
+      customer: {
+        name: ownerProfile?.full_name || company.business_name,
+        email: user.email || "",
+        taxId: ownerProfile?.cpf || "",
+        cellphone: ownerProfile?.phone || "",
+      },
       metadata: {
         company_id: companyId,
         invoice_ids: payment_history_ids.join(","),

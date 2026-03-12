@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { AlertOctagon, CreditCard } from 'lucide-react';
+import { toast } from 'sonner';
 import { SkeletonCard, SkeletonText, EmptyState } from '@/components/ui';
 import { formatCurrency } from '@/lib/formatters';
 import { usePlans } from '@/hooks/usePlans';
@@ -30,7 +32,18 @@ export default function PlanosPage() {
     reload,
   } = usePlans();
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+
+  // Detectar retorno do checkout de cartão
+  useEffect(() => {
+    if (searchParams.get('payment') === 'success') {
+      toast.success('Pagamento realizado! Aguarde a confirmação.');
+      reload();
+      router.replace('/planos');
+    }
+  }, [searchParams]);
 
   const handleSubscribe = async (plan: Plan) => {
     try {

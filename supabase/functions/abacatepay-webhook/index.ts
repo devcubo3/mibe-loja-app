@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
   }
 
   // ── Parsear body ─────────────────────────────────────────────────────────────
-  let body: { event?: string; data?: { id?: string; pixQrCode?: { id?: string } } };
+  let body: any;
   try {
     body = await req.json();
   } catch {
@@ -47,14 +47,18 @@ Deno.serve(async (req) => {
 
   const { event, data } = body;
 
-  // AbacatePay envia o ID do PIX em data.pixQrCode.id (não em data.id)
-  const gatewayId = data?.id || data?.pixQrCode?.id;
+  // ── Log completo do payload para diagnóstico ─────────────────────────────────
+  console.log("AbacatePay webhook PAYLOAD COMPLETO:", JSON.stringify(body));
 
-  // ── Log para diagnóstico ─────────────────────────────────────────────────────
-  console.log("AbacatePay webhook recebido:", JSON.stringify({ event, gatewayId, data }));
+  // AbacatePay envia o ID em diferentes locais dependendo do tipo de evento:
+  // - billing: data.billing.id ou data.id
+  // - pixQrCode: data.pixQrCode.id ou data.id
+  const gatewayId = data?.billing?.id || data?.pixQrCode?.id || data?.id;
+
+  console.log("AbacatePay webhook parsed:", JSON.stringify({ event, gatewayId }));
 
   if (!event || !gatewayId) {
-    console.log("Webhook ignorado: event ou gatewayId ausente", JSON.stringify(body));
+    console.log("Webhook ignorado: event ou gatewayId ausente");
     return new Response(JSON.stringify({ received: true }), {
       headers: { "Content-Type": "application/json" },
     });

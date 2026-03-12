@@ -95,6 +95,7 @@ export function PaymentModal({
                 body: JSON.stringify({
                     payment_history_ids: invoiceIds,
                     billing_type: method,
+                    app_url: window.location.origin,
                 }),
             });
 

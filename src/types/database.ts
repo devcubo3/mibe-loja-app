@@ -92,7 +92,6 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
-          asaas_customer_id: string | null
           business_name: string
           cashback_percent: number | null
           category_id: number | null
@@ -117,7 +116,6 @@ export type Database = {
         }
         Insert: {
           address?: string | null
-          asaas_customer_id?: string | null
           business_name: string
           cashback_percent?: number | null
           category_id?: number | null
@@ -142,7 +140,6 @@ export type Database = {
         }
         Update: {
           address?: string | null
-          asaas_customer_id?: string | null
           business_name?: string
           cashback_percent?: number | null
           category_id?: number | null
@@ -455,8 +452,6 @@ export type Database = {
       }
       subscriptions: {
         Row: {
-          asaas_customer_id: string | null
-          asaas_payment_id: string | null
           company_id: string
           created_at: string
           expires_at: string | null
@@ -467,8 +462,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          asaas_customer_id?: string | null
-          asaas_payment_id?: string | null
           company_id: string
           created_at?: string
           expires_at?: string | null
@@ -479,8 +472,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          asaas_customer_id?: string | null
-          asaas_payment_id?: string | null
           company_id?: string
           created_at?: string
           expires_at?: string | null
