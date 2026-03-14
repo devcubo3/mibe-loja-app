@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
@@ -129,7 +130,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Fazer login para obter session tokens
-    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+    // Usar client separado com anon key (não o admin singleton) para evitar
+    // corromper o state interno do client admin compartilhado
+    const authClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: sessionData, error: sessionError } = await authClient.auth.signInWithPassword({
       email: user.email.trim().toLowerCase(),
       password: user.password,
     });

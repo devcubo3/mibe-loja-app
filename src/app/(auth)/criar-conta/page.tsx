@@ -181,6 +181,7 @@ export default function CriarContaPage() {
         user: result.user,
         company: result.company,
         token: result.token,
+        refresh_token: result.refresh_token,
         isAuthenticated: true,
         isLoading: false,
       });
