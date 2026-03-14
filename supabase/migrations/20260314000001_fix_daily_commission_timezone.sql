@@ -1,12 +1,11 @@
--- Migration 005: Trigger que cria/acumula fatura COMISSAO_DIARIA ao registrar venda
+-- Migration: Corrige bug de timezone no trigger de comissão diária.
 --
--- Dispara AFTER INSERT em transactions.
--- Busca a assinatura ativa da empresa e o commission_percent do plano.
--- Cria nova fatura COMISSAO_DIARIA ou acumula no registro pendente do dia.
+-- CURRENT_DATE usa UTC (timezone do Supabase), mas os lojistas operam em BRT (UTC-3).
+-- Uma venda às 22:58 BRT do dia 13 era registrada como dia 14 (01:58 UTC),
+-- fazendo o trigger acumular comissões de dias diferentes na mesma fatura.
 --
--- IMPORTANTE: Após aplicar esta migration, remover o bloco de comissão diária
--- da API route src/app/api/sales/create/route.ts (linhas 107-138) para evitar
--- dupla contagem.
+-- Correção: usar (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::DATE
+-- para que o "dia" da comissão reflita o horário de Brasília.
 
 CREATE OR REPLACE FUNCTION fn_upsert_daily_commission()
 RETURNS TRIGGER
@@ -37,7 +36,7 @@ BEGIN
 
   v_commission := NEW.total_amount * (v_pct / 100);
 
-  -- Verificar se já existe fatura COMISSAO_DIARIA pendente para hoje
+  -- Verificar se já existe fatura COMISSAO_DIARIA pendente para hoje (BRT)
   SELECT id, amount
   INTO v_existing_id, v_existing_amt
   FROM payment_history
@@ -74,9 +73,3 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
-DROP TRIGGER IF EXISTS trg_upsert_daily_commission ON transactions;
-CREATE TRIGGER trg_upsert_daily_commission
-AFTER INSERT ON transactions
-FOR EACH ROW
-EXECUTE FUNCTION fn_upsert_daily_commission();
