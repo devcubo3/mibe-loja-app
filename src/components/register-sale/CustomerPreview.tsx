@@ -69,7 +69,7 @@ export function CustomerPreview({
                 Saldo disponível na sua loja
               </p>
               <p className="text-subtitle font-bold text-success">
-                {formatCurrency(customer.storeBalance?.balance || 0)}
+                {formatCurrency(Math.max(customer.storeBalance?.balance || 0, 0))}
               </p>
             </div>
             {customer.storeBalance?.balance > 0 && (

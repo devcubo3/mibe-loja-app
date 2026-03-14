@@ -50,7 +50,7 @@ export function SaleForm({
   const [error, setError] = useState<string | null>(null);
 
   const purchaseAmount = parseCurrencyInput(purchaseValue);
-  const availableBalance = customer.storeBalance?.balance || 0;
+  const availableBalance = Math.max(customer.storeBalance?.balance || 0, 0);
   const maxBalanceToUse = Math.min(availableBalance, purchaseAmount);
 
   const balanceUsed = useBalance

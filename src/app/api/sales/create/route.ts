@@ -33,6 +33,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Valor de cashback inválido' }, { status: 400 });
     }
 
+    // Validar saldo antes de aceitar resgate
+    if (cashback_redeemed && cashback_redeemed > 0) {
+      const { data: balanceData } = await supabaseAdmin
+        .from('cashback_balances')
+        .select('current_balance')
+        .eq('user_id', user_id)
+        .eq('company_id', companyId)
+        .maybeSingle();
+
+      const currentBalance = balanceData?.current_balance || 0;
+      if (cashback_redeemed > currentBalance) {
+        return NextResponse.json(
+          { error: 'Saldo insuficiente para resgate', code: 'INSUFFICIENT_BALANCE' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Gate: verificar assinatura ativa e empresa ativa
     const [subscriptionResult, companyResult] = await Promise.all([
       supabaseAdmin
