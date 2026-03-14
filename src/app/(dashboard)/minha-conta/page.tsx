@@ -33,7 +33,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function MinhaContaPage() {
   const router = useRouter();
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -66,11 +66,30 @@ export default function MinhaContaPage() {
 
   const handleSave = async (data: FormData) => {
     setIsSaving(true);
-    console.log('Dados salvos:', data);
-    // Aqui seria a chamada para API
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setIsSaving(false);
-    setIsEditing(false);
+    try {
+      const response = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ full_name: data.name }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao salvar');
+      }
+
+      updateUser({ name: result.user.name });
+      toast.success('Dados atualizados com sucesso!');
+      setIsEditing(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao salvar dados');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
