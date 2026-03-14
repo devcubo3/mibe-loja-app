@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Camera, Loader2 } from 'lucide-react';
+import { compressImage } from '@/lib/compressImage';
 
 interface ProfilePhotoUploadProps {
   currentPhoto?: string | null;
@@ -33,7 +34,7 @@ export function ProfilePhotoUpload({
     inputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -42,26 +43,33 @@ export function ProfilePhotoUpload({
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Imagem deve ter no máximo 2MB');
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Imagem deve ter no máximo 10MB');
       return;
     }
 
     setIsUploading(true);
     setError(null);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const url = event.target?.result as string;
-      setPreviewUrl(url);
-      onUpload(url);
+    try {
+      const compressed = await compressImage(file, { maxSizeMB: 0.5, maxWidthOrHeight: 500 });
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const url = event.target?.result as string;
+        setPreviewUrl(url);
+        onUpload(url);
+        setIsUploading(false);
+      };
+      reader.onerror = () => {
+        setError('Erro ao carregar imagem');
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(compressed);
+    } catch {
+      setError('Erro ao processar imagem');
       setIsUploading(false);
-    };
-    reader.onerror = () => {
-      setError('Erro ao carregar imagem');
-      setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   return (
