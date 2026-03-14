@@ -12,7 +12,7 @@ export function QuickActions() {
               <Plus className="w-7 h-7 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-body-lg font-semibold mb-xs flex items-center gap-2">
+              <h3 className="text-body-lg font-semibold mb-xs flex items-center gap-2 text-primary">
                 Registrar Nova Venda
                 <Sparkles className="w-4 h-4 text-warning" />
               </h3>
