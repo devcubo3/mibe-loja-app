@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const hasActiveSubscription =
       !subscriptionResult.error &&
       !!subscriptionResult.data &&
-      (subscriptionResult.data.status === 'active' || subscriptionResult.data.status === 'pending_payment');
+      subscriptionResult.data.status === 'active';
 
     const companyIsActive = companyResult.data?.is_active ?? true;
 

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
         .single(),
     ]);
 
-    if (subscriptionResult.error || !subscriptionResult.data || subscriptionResult.data.status === 'cancelled') {
+    if (subscriptionResult.error || !subscriptionResult.data || subscriptionResult.data.status !== 'active') {
       return NextResponse.json(
         { error: 'Plano ativo necessário para registrar vendas', code: 'SUBSCRIPTION_REQUIRED' },
         { status: 403 }
