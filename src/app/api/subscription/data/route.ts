@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      plans: plansResult.data || [],
+      plans: filteredPlans,
       subscription,
       pending_invoices: pendingInvoices,
       paid_invoices: paidInvoices,
