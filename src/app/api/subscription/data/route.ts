@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
       supabaseAdmin
         .from('companies')
-        .select('is_active')
+        .select('is_active, trial_used_at')
         .eq('id', companyId)
         .single(),
     ]);
@@ -37,6 +37,19 @@ export async function GET(request: NextRequest) {
     if (plansResult.error) {
       console.error('Erro ao buscar planos:', plansResult.error);
       return NextResponse.json({ error: 'Erro ao buscar planos' }, { status: 500 });
+    }
+
+    const companyData = companyResult.data;
+    const hasUsedTrial = !!companyData?.trial_used_at;
+
+    // Filtrar planos:
+    // Se nunca usou trial, mostrar apenas trial
+    // Se já usou trial, mostrar apenas planos pagos
+    let filteredPlans = plansResult.data || [];
+    if (hasUsedTrial) {
+      filteredPlans = filteredPlans.filter(p => !p.is_trial);
+    } else {
+      filteredPlans = filteredPlans.filter(p => p.is_trial);
     }
 
     const subscription = subscriptionResult.error ? null : subscriptionResult.data;

@@ -23,6 +23,11 @@ export function PlanCard({ plan, isCurrentPlan, isCancelled, onSelect }: PlanCar
       )}
     >
       <CardContent className="p-lg">
+        {plan.is_trial && !isCurrentPlan && (
+          <Badge variant="success" className="absolute top-md right-md">
+            {plan.trial_duration_days || 60} DIAS GRÁTIS
+          </Badge>
+        )}
         {isCurrentPlan && (
           <Badge variant="dark" className="absolute top-md right-md">
             Plano atual
@@ -50,13 +55,13 @@ export function PlanCard({ plan, isCurrentPlan, isCancelled, onSelect }: PlanCar
             'text-header font-bold',
             isCurrentPlan ? 'text-white' : 'text-primary'
           )}>
-            {formatCurrency(plan.monthly_price)}
+            {plan.is_trial ? 'Grátis' : formatCurrency(plan.monthly_price)}
           </span>
           <span className={cn(
             'text-body',
             isCurrentPlan ? 'text-white/70' : 'text-secondary'
           )}>
-            /mês
+            {plan.is_trial ? ` por ${plan.trial_duration_days || 60} dias` : '/mês'}
           </span>
         </div>
 
@@ -73,7 +78,7 @@ export function PlanCard({ plan, isCurrentPlan, isCancelled, onSelect }: PlanCar
           disabled={isCurrentPlan || isCancelled}
           onClick={() => onSelect(plan)}
         >
-          {isCurrentPlan ? 'Plano ativo' : 'Assinar plano'}
+          {isCurrentPlan ? 'Plano ativo' : (plan.is_trial ? 'Começar teste grátis' : 'Assinar plano')}
         </Button>
       </CardContent>
     </Card>

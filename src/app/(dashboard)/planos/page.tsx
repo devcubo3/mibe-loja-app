@@ -62,13 +62,17 @@ export default function PlanosPage() {
 
       await reload();
 
-      // Abrir modal de pagamento automaticamente para a fatura recém-criada
+      // Se gerou fatura, abrir modal de pagamento (plano pago)
       if (data.invoice?.id) {
         setSelectedInvoiceIds([data.invoice.id]);
         setPaymentModalOpen(true);
+      } else {
+        // Se não gerou fatura, é plano trial
+        toast.success(`Teste grátis ativado! Aproveite ${plan.trial_duration_days || 60} dias grátis.`);
       }
     } catch (err: any) {
       console.error('Erro ao assinar plano:', err);
+      toast.error(err.message || 'Erro ao assinar plano');
     }
   };
 

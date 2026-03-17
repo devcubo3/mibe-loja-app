@@ -53,23 +53,31 @@ export function CurrentPlanCard({ subscription, companyIsActive, pendingInvoices
               <Crown className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-body-lg font-semibold text-primary">{plan.name}</h3>
+              <h3 className="text-body-lg font-semibold text-primary">
+                {plan.is_trial ? 'Teste Grátis' : plan.name}
+              </h3>
               <p className="text-caption text-secondary">Plano atual</p>
             </div>
           </div>
-          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+          <Badge variant={plan.is_trial ? 'success' : statusConfig.variant}>
+            {plan.is_trial ? 'Período de teste' : statusConfig.label}
+          </Badge>
         </div>
 
         <div className="grid grid-cols-2 gap-md">
           <div>
             <p className="text-caption text-secondary">Mensalidade</p>
-            <p className="text-body-lg font-semibold text-primary">{formatCurrency(plan.monthly_price)}/mês</p>
+            <p className="text-body-lg font-semibold text-primary">
+              {plan.is_trial && subscription.expires_at 
+                ? `Grátis até ${formatDate(subscription.expires_at)}` 
+                : `${formatCurrency(plan.monthly_price)}/mês`}
+            </p>
           </div>
           <div>
             <p className="text-caption text-secondary">Comissão diária</p>
             <p className="text-body-lg font-semibold text-primary">{plan.commission_percent}% sobre vendas</p>
           </div>
-          {nextMensalidade && (
+          {!plan.is_trial && nextMensalidade && (
             <div className="col-span-2">
               <p className="text-caption text-secondary">Próximo vencimento</p>
               <p className="text-body font-medium text-primary">{formatDate(nextMensalidade.due_date)}</p>

@@ -125,7 +125,7 @@ export default function RegisterSalePage() {
         return;
       }
 
-      // Se gerou fatura, abrir PaymentModal imediatamente
+      // Se gerou fatura, abrir PaymentModal imediatamente (plano pago)
       if (data.invoice?.id) {
         setSelectedInvoiceIds([data.invoice.id]);
         // Recarregar dados do bloqueador para incluir a nova fatura
@@ -138,7 +138,7 @@ export default function RegisterSalePage() {
         });
         setPaymentModalOpen(true);
       } else {
-        // Sem fatura (improvável), recarregar status
+        // Sem fatura (trial ativo com sucesso), recarregar status para liberar a página
         reloadStatus();
       }
     } catch {

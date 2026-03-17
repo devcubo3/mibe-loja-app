@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Plano não encontrado ou inativo' }, { status: 404 });
     }
 
-    // Verificar se já existe assinatura ativa (ignora cancelled)
+    // Verificar se já existe assinatura ativa (ignora cancelled e overdue se trial)
     const { data: existing } = await supabaseAdmin
       .from('subscriptions')
       .select('id, status')
@@ -48,42 +48,68 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Empresa já possui uma assinatura ativa' }, { status: 409 });
     }
 
-    // Criar assinatura (pending_payment até webhook confirmar pagamento)
+    // Verificar se a empresa já usou o trial e o plano é trial
+    const { data: companyRecord } = await supabaseAdmin
+      .from('companies')
+      .select('trial_used_at')
+      .eq('id', companyId)
+      .single();
+
+    if (plan.is_trial && companyRecord?.trial_used_at) {
+      return NextResponse.json({ error: 'A empresa já utilizou o período de teste grátis' }, { status: 409 });
+    }
+
+    // Criar assinatura (pending_payment até webhook confirmar pagamento SE PAGO, ou active direto SE TRIAL)
+    const isTrial = plan.is_trial;
     const { data: subscription, error: subError } = await supabaseAdmin
       .from('subscriptions')
       .insert({
         company_id: companyId,
         plan_id,
-        status: 'pending_payment',
+        status: isTrial ? 'active' : 'pending_payment',
         started_at: new Date().toISOString(),
+        expires_at: isTrial ? getDatePlusDays(plan.trial_duration_days || 60) : null,
       })
       .select('*, plans(*)')
       .single();
+
 
     if (subError || !subscription) {
       console.error('Erro ao criar assinatura:', subError);
       return NextResponse.json({ error: 'Erro ao criar assinatura' }, { status: 500 });
     }
 
-    // Gerar primeira fatura de mensalidade (vencimento em 7 dias)
-    const { data: invoice, error: invoiceError } = await supabaseAdmin
-      .from('payment_history')
-      .insert({
-        subscription_id: subscription.id,
-        type: 'MENSALIDADE',
-        amount: Number(plan.monthly_price),
-        status: 'pending',
-        due_date: getDatePlusDays(7),
-      })
-      .select('*')
-      .single();
+    let invoice = null;
 
-    if (invoiceError) {
-      console.error('Erro ao gerar fatura:', invoiceError);
-      // Não falhar a assinatura por isso — retorna sem invoice
+    if (!isTrial) {
+      // Gerar primeira fatura de mensalidade (vencimento em 7 dias)
+      const { data: newInvoice, error: invoiceError } = await supabaseAdmin
+        .from('payment_history')
+        .insert({
+          subscription_id: subscription.id,
+          type: 'MENSALIDADE',
+          amount: Number(plan.monthly_price),
+          status: 'pending',
+          due_date: getDatePlusDays(7),
+        })
+        .select('*')
+        .single();
+
+      if (invoiceError) {
+        console.error('Erro ao gerar fatura:', invoiceError);
+        // Não falhar a assinatura por isso — retorna sem invoice
+      } else {
+        invoice = newInvoice;
+      }
+    } else {
+      // Marcar na empresa que ela usou o trial
+      await supabaseAdmin
+        .from('companies')
+        .update({ trial_used_at: new Date().toISOString() })
+        .eq('id', companyId);
     }
 
-    return NextResponse.json({ success: true, subscription, invoice: invoice || null });
+    return NextResponse.json({ success: true, subscription, invoice });
   } catch (error) {
     console.error('Erro interno:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
