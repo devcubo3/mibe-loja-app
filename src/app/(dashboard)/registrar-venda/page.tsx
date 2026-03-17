@@ -13,7 +13,9 @@ import { CustomerPreview } from '@/components/register-sale/CustomerPreview';
 import { SaleForm, SaleData } from '@/components/register-sale/SaleForm';
 import { SaleConfirmation } from '@/components/register-sale/SaleConfirmation';
 import { Divider } from '@/components/ui';
-import { PlanCard, PendingInvoicesTable, PaymentModal } from '@/components/plans';
+import { PlanCard, PendingInvoicesTable, PaymentModal, PaymentHistoryTable,
+  TrialConfirmationModal
+} from '@/components/plans';
 import type { CustomerWithBalance } from '@/types/customer';
 import type { SaleWithCustomer } from '@/types/sale';
 import type { Plan, PaymentRecord } from '@/types/plan';
@@ -48,6 +50,10 @@ export default function RegisterSalePage() {
   // Pagamento inline
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+
+  // Trial Modal state
+  const [trialModalOpen, setTrialModalOpen] = useState(false);
+  const [selectedPlanForTrial, setSelectedPlanForTrial] = useState<Plan | null>(null);
 
   // ── Status check (leve, rápido) ────────────────────────────────────────────
 
@@ -101,6 +107,15 @@ export default function RegisterSalePage() {
 
   // ── Assinatura de plano ────────────────────────────────────────────────────
 
+  const handlePlanSelect = (plan: Plan) => {
+    if (plan.is_trial) {
+      setSelectedPlanForTrial(plan);
+      setTrialModalOpen(true);
+    } else {
+      handleSubscribe(plan);
+    }
+  };
+
   const handleSubscribe = async (plan: Plan) => {
     const token = storeService.getAuthToken();
     if (!token) return;
@@ -138,7 +153,8 @@ export default function RegisterSalePage() {
         });
         setPaymentModalOpen(true);
       } else {
-        // Sem fatura (trial ativo com sucesso), recarregar status para liberar a página
+        // Sem fatura (trial ativo com sucesso), fechar modal e recarregar status para liberar a página
+        setTrialModalOpen(false);
         reloadStatus();
       }
     } catch {
@@ -303,7 +319,7 @@ export default function RegisterSalePage() {
                 plan={plan}
                 isCurrentPlan={false}
                 isCancelled={isSubscribing}
-                onSelect={handleSubscribe}
+                onSelect={handlePlanSelect}
               />
             ))}
           </div>

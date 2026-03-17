@@ -14,6 +14,7 @@ import {
   PaymentModal,
   PaymentHistoryTable,
   PendingInvoicesTable,
+  TrialConfirmationModal
 } from '@/components/plans';
 import type { Plan } from '@/types/plan';
 
@@ -34,7 +35,12 @@ export default function PlanosPage() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+  // Estados de modais
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  
+  const [trialModalOpen, setTrialModalOpen] = useState(false);
+  const [selectedPlanForTrial, setSelectedPlanForTrial] = useState<Plan | null>(null);
 
   // Detectar retorno do checkout de cartão
   useEffect(() => {
@@ -45,7 +51,17 @@ export default function PlanosPage() {
     }
   }, [searchParams]);
 
+  const handlePlanSelect = (plan: Plan) => {
+    if (plan.is_trial) {
+      setSelectedPlanForTrial(plan);
+      setTrialModalOpen(true);
+    } else {
+      handleSubscribe(plan);
+    }
+  };
+
   const handleSubscribe = async (plan: Plan) => {
+    setIsSubscribing(true);
     try {
       const token = storeService.getAuthToken();
       const response = await fetch('/api/subscription/subscribe', {
@@ -68,11 +84,14 @@ export default function PlanosPage() {
         setPaymentModalOpen(true);
       } else {
         // Se não gerou fatura, é plano trial
+        setTrialModalOpen(false);
         toast.success(`Teste grátis ativado! Aproveite ${plan.trial_duration_days || 60} dias grátis.`);
       }
     } catch (err: any) {
       console.error('Erro ao assinar plano:', err);
       toast.error(err.message || 'Erro ao assinar plano');
+    } finally {
+      setIsSubscribing(false);
     }
   };
 
@@ -168,9 +187,9 @@ export default function PlanosPage() {
               <PlanCard
                 key={plan.id}
                 plan={plan}
-                isCurrentPlan={false}
-                isCancelled={false}
-                onSelect={handleSubscribe}
+                isCurrentPlan={subscription?.plan?.id === plan.id}
+                isCancelled={subscription?.status === 'cancelled'}
+                onSelect={handlePlanSelect}
               />
             ))}
           </div>
@@ -191,6 +210,17 @@ export default function PlanosPage() {
         totalAmount={totalSelectedAmount}
         onPaymentComplete={reload}
       />
+
+      {/* Modal de Confirmação do Teste Grátis */}
+      {selectedPlanForTrial && (
+        <TrialConfirmationModal
+          isOpen={trialModalOpen}
+          onClose={() => setTrialModalOpen(false)}
+          plan={selectedPlanForTrial}
+          isLoading={isSubscribing}
+          onConfirm={() => handleSubscribe(selectedPlanForTrial)}
+        />
+      )}
     </div>
   );
 }
