@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, Banknote, QrCode, CreditCard } from 'lucide-react';
+import { ChevronRight, Banknote, QrCode, CreditCard, AlertCircle } from 'lucide-react';
 import { Avatar, Badge, Card } from '@/components/ui';
 import {
   formatCPF,
@@ -16,6 +16,7 @@ const PAYMENT_ICONS: Record<PaymentMethodType, { icon: React.ReactNode; label: s
   pix: { icon: <QrCode className="w-3.5 h-3.5" />, label: 'PIX' },
   credito: { icon: <CreditCard className="w-3.5 h-3.5" />, label: 'Crédito' },
   debito: { icon: <CreditCard className="w-3.5 h-3.5" />, label: 'Débito' },
+  expirado: { icon: <AlertCircle className="w-3.5 h-3.5" />, label: 'Saldo Expirado' },
 };
 
 interface SaleCardProps {
@@ -81,8 +82,8 @@ export function SaleCard({ sale }: SaleCardProps) {
 
             <div className="flex items-center gap-sm">
               <span className="text-body text-text-secondary">Cashback:</span>
-              <Badge variant="success">
-                +{formatCurrency(sale.cashback_earned || 0)}
+              <Badge variant={sale.payment_method === 'expirado' ? 'warning' : 'success'}>
+                {sale.payment_method === 'expirado' ? 'Expirado' : `+${formatCurrency(sale.cashback_earned || 0)}`}
               </Badge>
             </div>
 

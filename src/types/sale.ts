@@ -1,4 +1,4 @@
-export type PaymentMethodType = 'dinheiro' | 'pix' | 'credito' | 'debito';
+export type PaymentMethodType = 'dinheiro' | 'pix' | 'credito' | 'debito' | 'expirado';
 
 // Tipos baseados na estrutura real do banco de dados (transactions)
 export interface Sale {

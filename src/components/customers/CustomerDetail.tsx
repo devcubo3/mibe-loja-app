@@ -123,7 +123,14 @@ export function CustomerDetail({ customer, recentSales }: CustomerDetailProps) {
                     </p>
                   </div>
                   <div className="flex items-center gap-sm">
-                    {sale.cashback_redeemed && sale.cashback_redeemed > 0 ? (
+                    {sale.payment_method === 'expirado' ? (
+                      <div className="flex flex-col items-end">
+                        <span className="text-warning text-caption font-medium">Saldo Expirado</span>
+                        <span className="text-warning">
+                          -{formatCurrency(sale.cashback_redeemed)}
+                        </span>
+                      </div>
+                    ) : sale.cashback_redeemed && sale.cashback_redeemed > 0 ? (
                       <span className="text-error">
                         -{formatCurrency(sale.cashback_redeemed)}
                       </span>

@@ -7,7 +7,7 @@ import {
   formatCurrency,
   formatDateTime,
 } from '@/lib/formatters';
-import { User, Banknote, QrCode, CreditCard } from 'lucide-react';
+import { User, Banknote, QrCode, CreditCard, AlertCircle } from 'lucide-react';
 import type { SaleWithCustomer, PaymentMethodType } from '@/types/sale';
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethodType, { label: string; icon: React.ReactNode }> = {
@@ -15,6 +15,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethodType, { label: string; icon: Re
   pix: { label: 'PIX', icon: <QrCode className="w-4 h-4" /> },
   credito: { label: 'Cartão de Crédito', icon: <CreditCard className="w-4 h-4" /> },
   debito: { label: 'Cartão de Débito', icon: <CreditCard className="w-4 h-4" /> },
+  expirado: { label: 'Saldo Expirado', icon: <AlertCircle className="w-4 h-4 text-warning" /> }
 };
 
 interface SaleDetailProps {
@@ -36,7 +37,9 @@ export function SaleDetail({ sale }: SaleDetailProps) {
         <p className="text-body text-white/90 mb-md">
           {sale.created_at ? formatDateTime(sale.created_at) : '—'}
         </p>
-        <Badge variant="success">Confirmada</Badge>
+        <Badge variant={sale.payment_method === 'expirado' ? 'warning' : 'success'}>
+          {sale.payment_method === 'expirado' ? 'Expirada' : 'Confirmada'}
+        </Badge>
       </Card>
 
       {/* Customer Card */}
@@ -69,14 +72,16 @@ export function SaleDetail({ sale }: SaleDetailProps) {
         <h2 className="section-title mb-md">Detalhes da transação</h2>
         <Card variant="default" padding="md">
           <div className="space-y-md">
-            <DetailRow
-              label="Valor da compra"
-              value={formatCurrency(sale.total_amount || 0)}
-            />
+            {sale.payment_method !== 'expirado' && (
+              <DetailRow
+                label="Valor da compra"
+                value={formatCurrency(sale.total_amount || 0)}
+              />
+            )}
 
             {sale.cashback_redeemed > 0 && (
               <DetailRow
-                label="Saldo utilizado"
+                label={sale.payment_method === 'expirado' ? "Valor Expirado" : "Saldo utilizado"}
                 value={`- ${formatCurrency(sale.cashback_redeemed)}`}
                 valueClass="text-error"
               />
@@ -84,19 +89,22 @@ export function SaleDetail({ sale }: SaleDetailProps) {
 
             <div className="h-px bg-input-border" />
 
-            <DetailRow
-              label="Valor pago pelo cliente"
-              value={formatCurrency(sale.net_amount_paid || 0)}
-              bold
-            />
-
-            <div className="h-px bg-input-border" />
-
-            <DetailRow
-              label={`Cashback gerado (${cashbackPercentage}%)`}
-              value={`+ ${formatCurrency(sale.cashback_earned || 0)}`}
-              valueClass="text-success"
-            />
+            {sale.payment_method !== 'expirado' && (
+              <>
+                <div className="h-px bg-input-border" />
+                <DetailRow
+                  label="Valor pago pelo cliente"
+                  value={formatCurrency(sale.net_amount_paid || 0)}
+                  bold
+                />
+                <div className="h-px bg-input-border" />
+                <DetailRow
+                  label={`Cashback gerado (${cashbackPercentage}%)`}
+                  value={`+ ${formatCurrency(sale.cashback_earned || 0)}`}
+                  valueClass="text-success"
+                />
+              </>
+            )}
 
             <div className="h-px bg-input-border" />
 
