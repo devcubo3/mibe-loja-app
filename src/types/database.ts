@@ -561,6 +561,74 @@ export type Database = {
           },
         ]
       }
+      user_points: {
+        Row: {
+          user_id: string
+          total_points: number
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          total_points?: number
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          total_points?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_points_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      points_history: {
+        Row: {
+          id: string
+          user_id: string
+          transaction_id: string | null
+          points: number
+          type: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          transaction_id?: string | null
+          points: number
+          type?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          transaction_id?: string | null
+          points?: number
+          type?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_history_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -619,6 +687,8 @@ export type Subscription = Tables<'subscriptions'>
 export type PaymentHistory = Tables<'payment_history'>
 export type AppConfig = Tables<'app_configs'>
 export type CompanyGallery = Tables<'company_gallery'>
+export type UserPoints = Tables<'user_points'>
+export type PointsHistory = Tables<'points_history'>
 
 // Enums
 export type CompanyStatus = Enums<'company_status'>
