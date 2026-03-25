@@ -30,17 +30,19 @@ export async function POST(request: NextRequest) {
         if (data.latitude !== undefined) updatePayload.latitude = data.latitude;
         if (data.longitude !== undefined) updatePayload.longitude = data.longitude;
 
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
             .from('companies')
             .update(updatePayload)
-            .eq('id', companyId);
+            .eq('id', companyId)
+            .select()
+            .single();
 
-        if (error) {
-            console.error('Erro no update:', error);
+        if (error || !updated) {
+            console.error('Erro no update:', error, 'companyId:', companyId, 'payload:', updatePayload);
             return NextResponse.json({ error: 'Erro ao atualizar banco de dados' }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, company: updated });
     } catch (error) {
         console.error('Erro interno:', error);
         return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
