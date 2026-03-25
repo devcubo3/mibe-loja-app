@@ -15,6 +15,7 @@ import type { CompanyData } from '@/types/auth';
 import type { StoreUpdateData } from '@/types/store';
 import { storeService } from '@/services/storeService';
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 const schema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100, 'Nome deve ter no máximo 100 caracteres'),
@@ -59,6 +60,7 @@ export function EditStoreModal({
     formState: { errors },
     setValue,
     watch,
+    reset,
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -72,6 +74,21 @@ export function EditStoreModal({
       min_purchase: formatCurrency(store.min_purchase_value || 0),
     },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        name: store.business_name,
+        email: store.email || '',
+        category: store.category || 'Alimentação',
+        description: store.description || '',
+        cashback_percentage: store.cashback_percent.toString(),
+        has_expiration: store.has_expiration,
+        expiration_days: store.expiration_days?.toString() || '90',
+        min_purchase: formatCurrency(store.min_purchase_value || 0),
+      });
+    }
+  }, [isOpen, store, reset]);
 
   const descriptionValue = watch('description') || '';
   const hasExpiration = watch('has_expiration');
@@ -97,6 +114,7 @@ export function EditStoreModal({
       onClose();
     } catch (error) {
       console.error('Erro ao salvar:', error);
+      toast.error('Erro ao salvar alterações');
     }
 
     setIsLoading(false);

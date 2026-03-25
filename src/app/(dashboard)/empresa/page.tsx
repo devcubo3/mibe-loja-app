@@ -16,6 +16,7 @@ import {
 import { formatCNPJ, formatCurrency } from '@/lib/formatters';
 import type { StoreUpdateData, Review } from '@/types/store';
 import { storeService } from '@/services/storeService';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 export default function EmpresaPage() {
@@ -65,10 +66,10 @@ export default function EmpresaPage() {
     try {
       await storeService.uploadAsset(file, 'cover');
       await loadCompany();
-      // toast.success('Capa atualizada!');
+      toast.success('Capa atualizada!');
     } catch (error) {
       console.error('Erro ao subir capa:', error);
-      // toast.error('Falha ao subir capa');
+      toast.error('Falha ao subir capa');
     }
   };
 
@@ -77,10 +78,10 @@ export default function EmpresaPage() {
     try {
       await storeService.uploadAsset(file, 'logo');
       await loadCompany();
-      // toast.success('Logo atualizado!');
+      toast.success('Logo atualizado!');
     } catch (error) {
       console.error('Erro ao subir logo:', error);
-      // toast.error('Falha ao subir logo');
+      toast.error('Falha ao subir logo');
     }
   };
 
@@ -88,10 +89,10 @@ export default function EmpresaPage() {
     try {
       await storeService.updateStore(data);
       await loadCompany();
-      // toast.success('Dados salvos com sucesso!');
+      toast.success('Dados salvos com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      // toast.error('Erro ao salvar alterações');
+      toast.error('Erro ao salvar alterações');
       throw error;
     }
   };
