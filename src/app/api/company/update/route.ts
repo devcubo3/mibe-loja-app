@@ -38,8 +38,19 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (error || !updated) {
-            console.error('Erro no update:', error, 'companyId:', companyId, 'payload:', updatePayload);
-            return NextResponse.json({ error: 'Erro ao atualizar banco de dados' }, { status: 500 });
+            console.error('Erro no update:', JSON.stringify({
+                code: error?.code,
+                message: error?.message,
+                details: error?.details,
+                hint: error?.hint,
+                companyId,
+                payload: updatePayload,
+            }, null, 2));
+            return NextResponse.json({ 
+                error: 'Erro ao atualizar banco de dados',
+                details: error?.message || 'Registro não encontrado',
+                code: error?.code,
+            }, { status: 500 });
         }
 
         return NextResponse.json({ success: true, company: updated });
