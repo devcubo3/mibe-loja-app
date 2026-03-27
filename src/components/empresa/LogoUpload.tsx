@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Camera, Loader2 } from 'lucide-react';
 import { compressImage } from '@/lib/compressImage';
 
@@ -25,6 +25,10 @@ export function LogoUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (currentLogo) setPreviewUrl(currentLogo);
+  }, [currentLogo]);
 
   const sizes = {
     sm: 'w-16 h-16',

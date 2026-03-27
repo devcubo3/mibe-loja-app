@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Camera, Loader2 } from 'lucide-react';
 import { compressImage } from '@/lib/compressImage';
 
@@ -19,6 +19,10 @@ export function CoverUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (currentCover) setPreviewUrl(currentCover);
+  }, [currentCover]);
 
   const handleClick = () => {
     inputRef.current?.click();

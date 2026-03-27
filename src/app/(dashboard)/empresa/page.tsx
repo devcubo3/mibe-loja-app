@@ -21,7 +21,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function EmpresaPage() {
   const router = useRouter();
-  const { company, loadCompany } = useAuth();
+  const { company, loadCompany, updateCompany } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -64,7 +64,8 @@ export default function EmpresaPage() {
   const handleCoverUpload = async (url: string, file?: File) => {
     if (!file) return;
     try {
-      await storeService.uploadAsset(file, 'cover');
+      const newCoverUrl = await storeService.uploadAsset(file, 'cover');
+      updateCompany({ cover_url: newCoverUrl });
       await loadCompany();
       toast.success('Capa atualizada!');
     } catch (error) {
@@ -76,7 +77,8 @@ export default function EmpresaPage() {
   const handleLogoUpload = async (url: string, file?: File) => {
     if (!file) return;
     try {
-      await storeService.uploadAsset(file, 'logo');
+      const newLogoUrl = await storeService.uploadAsset(file, 'logo');
+      updateCompany({ logo_url: newLogoUrl });
       await loadCompany();
       toast.success('Logo atualizado!');
     } catch (error) {

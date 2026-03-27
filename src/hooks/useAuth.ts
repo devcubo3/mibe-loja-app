@@ -125,6 +125,7 @@ export const useAuth = create<AuthStore>()(
 
         try {
           const response = await fetch('/api/company/me', {
+            cache: 'no-store',
             headers: {
               'Authorization': `Bearer ${currentState.token}`
             }
