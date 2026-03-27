@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
         const page = parseInt(searchParams.get('page') || '0', 10);
         const pageSize = 20;
 
-        let query = supabase
+        // Usar admin para queries com join em profiles (RLS bloquearia perfis de outros usuários)
+        const admin = getSupabaseAdmin();
+        let query = admin
             .from('cashback_balances')
             .select(`
         id,
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
         let transactionStats: Record<string, { total_purchases: number; total_spent: number; total_cashback: number }> = {};
 
         if (customerIds.length > 0) {
-            const { data: transactions } = await supabase
+            const { data: transactions } = await admin
                 .from('transactions')
                 .select('user_id, total_amount, cashback_earned')
                 .eq('company_id', companyId)
