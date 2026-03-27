@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAuth, AuthError } from '@/lib/auth-helpers';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(request: NextRequest) {
     try {
@@ -18,9 +17,8 @@ export async function GET(request: NextRequest) {
         // Limpar CPF
         cpf = cpf.replace(/[.-]/g, '');
 
-        // Buscar profile pelo CPF usando admin (RLS bloquearia perfis de outros usuários)
-        const admin = getSupabaseAdmin();
-        const { data: profile, error: profileError } = await admin
+        // Buscar profile pelo CPF
+        const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('id, full_name, cpf, phone, birth_date, created_at, avatar_url')
             .eq('cpf', cpf)

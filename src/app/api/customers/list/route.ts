@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAuth, AuthError } from '@/lib/auth-helpers';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(request: NextRequest) {
     try {
@@ -15,9 +14,7 @@ export async function GET(request: NextRequest) {
         const page = parseInt(searchParams.get('page') || '0', 10);
         const pageSize = 20;
 
-        // Usar admin para queries com join em profiles (RLS bloquearia perfis de outros usuários)
-        const admin = getSupabaseAdmin();
-        let query = admin
+        let query = supabase
             .from('cashback_balances')
             .select(`
         id,
@@ -62,7 +59,7 @@ export async function GET(request: NextRequest) {
         let transactionStats: Record<string, { total_purchases: number; total_spent: number; total_cashback: number }> = {};
 
         if (customerIds.length > 0) {
-            const { data: transactions } = await admin
+            const { data: transactions } = await supabase
                 .from('transactions')
                 .select('user_id, total_amount, cashback_earned')
                 .eq('company_id', companyId)
