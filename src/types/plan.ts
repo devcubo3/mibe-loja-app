@@ -6,7 +6,7 @@ export type PaymentRecord = PaymentHistoryRow;
 
 // Status tipados (o banco usa string genérica)
 export type SubscriptionStatus = 'active' | 'overdue' | 'cancelled' | 'pending_payment';
-export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded' | 'overdue';
 
 // Subscription com plan joinado
 export interface SubscriptionWithPlan extends Omit<SubscriptionRow, 'status'> {
@@ -28,6 +28,7 @@ export const PAYMENT_STATUS_CONFIG: Record<PaymentStatus, { label: string; varia
   paid: { label: 'Pago', variant: 'success' },
   failed: { label: 'Falhou', variant: 'error' },
   refunded: { label: 'Reembolsado', variant: 'dark' },
+  overdue: { label: 'Vencida', variant: 'error' },
 };
 
 // Tipos de fatura
