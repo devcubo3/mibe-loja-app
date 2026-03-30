@@ -18,16 +18,22 @@ export type Database = {
         Row: {
           global_fee_percent: number | null
           id: number
+          support_email: string | null
+          support_whatsapp: string | null
           updated_at: string | null
         }
         Insert: {
           global_fee_percent?: number | null
           id?: number
+          support_email?: string | null
+          support_whatsapp?: string | null
           updated_at?: string | null
         }
         Update: {
           global_fee_percent?: number | null
           id?: number
+          support_email?: string | null
+          support_whatsapp?: string | null
           updated_at?: string | null
         }
         Relationships: []
