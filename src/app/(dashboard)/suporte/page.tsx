@@ -1,19 +1,31 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, Button } from '@/components/ui';
-
-const SUPPORT_WHATSAPP = '5511999999999';
+import { supabase } from '@/lib/supabase';
 
 export default function SuportePage() {
   const { company } = useAuth();
+  const [supportWhatsapp, setSupportWhatsapp] = useState('');
+
+  useEffect(() => {
+    supabase
+      .from('app_configs')
+      .select('support_whatsapp')
+      .single()
+      .then(({ data }) => {
+        if (data?.support_whatsapp) setSupportWhatsapp(data.support_whatsapp);
+      });
+  }, []);
 
   const handleWhatsAppSupport = () => {
+    if (!supportWhatsapp) return;
     const message = encodeURIComponent(
       `Olá! Preciso de ajuda com minha loja ${company?.business_name || ''} (CNPJ: ${company?.cnpj || ''}).`
     );
-    window.open(`https://wa.me/${SUPPORT_WHATSAPP}?text=${message}`, '_blank');
+    window.open(`https://wa.me/${supportWhatsapp}?text=${message}`, '_blank');
   };
 
   return (
@@ -53,6 +65,7 @@ export default function SuportePage() {
           <Button
             onClick={handleWhatsAppSupport}
             fullWidth
+            disabled={!supportWhatsapp}
             icon={<MessageCircle className="w-5 h-5" />}
             className="bg-whatsapp hover:bg-[#20BA5A] border-whatsapp"
           >

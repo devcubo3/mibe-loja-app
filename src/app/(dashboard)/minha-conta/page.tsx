@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,14 +16,13 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, Button, Input } from '@/components/ui';
+import { supabase } from '@/lib/supabase';
 import {
   ProfilePhotoUpload,
   ChangePasswordModal,
   LogoutConfirmModal,
 } from '@/components/minha-conta';
 // Note: CompanyUser only has name and email editable fields
-
-const SUPPORT_WHATSAPP = '5511999999999';
 
 const schema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres').max(100, 'Nome deve ter no máximo 100 caracteres'),
@@ -39,6 +38,17 @@ export default function MinhaContaPage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [supportWhatsapp, setSupportWhatsapp] = useState('');
+
+  useEffect(() => {
+    supabase
+      .from('app_configs')
+      .select('support_whatsapp')
+      .single()
+      .then(({ data }) => {
+        if (data?.support_whatsapp) setSupportWhatsapp(data.support_whatsapp);
+      });
+  }, []);
 
   const {
     register,
@@ -127,10 +137,11 @@ export default function MinhaContaPage() {
   };
 
   const handleWhatsAppSupport = () => {
+    if (!supportWhatsapp) return;
     const message = encodeURIComponent(
       `Olá, preciso de ajuda com o painel MIBE Store`
     );
-    window.open(`https://wa.me/${SUPPORT_WHATSAPP}?text=${message}`, '_blank');
+    window.open(`https://wa.me/${supportWhatsapp}?text=${message}`, '_blank');
   };
 
   const handleLogout = async () => {
