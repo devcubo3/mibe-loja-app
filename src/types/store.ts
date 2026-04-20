@@ -58,7 +58,7 @@ export interface Review {
 
 export const STORE_CATEGORIES = [
   'Alimentação',
-  'Compras',
+  'Outros',
   'Saúde',
   'Casa',
   'Beleza',
