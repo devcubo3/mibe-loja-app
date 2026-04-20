@@ -74,7 +74,7 @@ export function CurrentPlanCard({ subscription, companyIsActive, pendingInvoices
             </p>
           </div>
           <div>
-            <p className="text-caption text-secondary">Comissão diária</p>
+            <p className="text-caption text-secondary">Taxa</p>
             <p className="text-body-lg font-semibold text-primary">{plan.commission_percent}% sobre vendas</p>
           </div>
           {!plan.is_trial && nextMensalidade && (

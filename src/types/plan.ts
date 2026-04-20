@@ -36,5 +36,5 @@ export type InvoiceType = 'MENSALIDADE' | 'COMISSAO_DIARIA';
 
 export const INVOICE_TYPE_CONFIG: Record<InvoiceType, { label: string }> = {
   MENSALIDADE: { label: 'Mensalidade' },
-  COMISSAO_DIARIA: { label: 'Comissão Diária' },
+  COMISSAO_DIARIA: { label: 'Cobrança' },
 };

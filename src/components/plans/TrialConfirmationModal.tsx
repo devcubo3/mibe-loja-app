@@ -44,7 +44,7 @@ export function TrialConfirmationModal({
               <p className="text-body font-semibold text-green-800">Grátis</p>
             </div>
             <div>
-              <p className="text-caption text-green-600">Comissão diária</p>
+              <p className="text-caption text-green-600">Taxa</p>
               <p className="text-body font-semibold text-green-800">{plan.commission_percent}% sobre vendas</p>
             </div>
           </div>
