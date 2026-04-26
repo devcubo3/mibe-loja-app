@@ -17,6 +17,9 @@ import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import { storeService } from '@/services/storeService';
 import type { PaymentMethod, PaymentStep, CreatePaymentResponse } from '@/types/payment';
 
+const PIX_POLLING_INTERVAL_MS = 5000;
+const PIX_POLLING_TIMEOUT_MS = 5 * 60 * 1000;
+
 interface PaymentModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -37,8 +40,21 @@ export function PaymentModal({
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Polling: verifica status PIX a cada 5s enquanto exibindo QR code
+    const stopPolling = () => {
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+    };
+
+    // Polling: verifica status PIX a cada 5s enquanto exibindo QR code, com
+    // timeout de 5min para evitar loop infinito caso o usuário abandone a tela.
     useEffect(() => {
         if (step !== 'pix-display' || !paymentData?.payment_id) return;
 
@@ -63,16 +79,14 @@ export function PaymentModal({
             }
         };
 
-        pollingRef.current = setInterval(checkPayment, 5000);
+        pollingRef.current = setInterval(checkPayment, PIX_POLLING_INTERVAL_MS);
+        timeoutRef.current = setTimeout(() => {
+            stopPolling();
+            setStep('pix-timeout');
+        }, PIX_POLLING_TIMEOUT_MS);
+
         return stopPolling;
     }, [step, paymentData?.payment_id]);
-
-    const stopPolling = () => {
-        if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-        }
-    };
 
     const handleSelectMethod = async (method: PaymentMethod) => {
         setStep('processing');
@@ -261,6 +275,32 @@ export function PaymentModal({
                             <p className="text-caption text-secondary">
                                 Aguardando confirmação do pagamento...
                             </p>
+                        </div>
+                    </>
+                )}
+
+                {/* Etapa: Polling PIX expirou */}
+                {step === 'pix-timeout' && (
+                    <>
+                        <div className="flex flex-col items-center gap-md py-md">
+                            <div className="w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center">
+                                <AlertCircle className="w-8 h-8 text-warning" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-body-lg font-semibold text-primary">Tempo de verificação expirado</p>
+                                <p className="text-body text-secondary mt-xs">
+                                    Não recebemos a confirmação do pagamento. Se você já pagou, clique em verificar novamente.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-md">
+                            <Button variant="ghost" fullWidth onClick={handleClose}>
+                                Cancelar
+                            </Button>
+                            <Button fullWidth onClick={() => setStep('pix-display')}>
+                                Verificar novamente
+                            </Button>
                         </div>
                     </>
                 )}

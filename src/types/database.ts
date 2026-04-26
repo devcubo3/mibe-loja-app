@@ -6,6 +6,9 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+export type PaymentHistoryStatus = 'pending' | 'paid' | 'overdue' | 'refunded'
+export type PaymentHistoryType = 'MENSALIDADE' | 'COMISSAO_DIARIA'
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -307,9 +310,9 @@ export type Database = {
           gateway_reference: string | null
           id: string
           payment_date: string | null
-          status: string
+          status: PaymentHistoryStatus
           subscription_id: string
-          type: string
+          type: PaymentHistoryType
         }
         Insert: {
           amount: number
@@ -319,9 +322,9 @@ export type Database = {
           gateway_reference?: string | null
           id?: string
           payment_date?: string | null
-          status?: string
+          status?: PaymentHistoryStatus
           subscription_id: string
-          type?: string
+          type?: PaymentHistoryType
         }
         Update: {
           amount?: number
@@ -331,9 +334,9 @@ export type Database = {
           gateway_reference?: string | null
           id?: string
           payment_date?: string | null
-          status?: string
+          status?: PaymentHistoryStatus
           subscription_id?: string
-          type?: string
+          type?: PaymentHistoryType
         }
         Relationships: [
           {

@@ -10,6 +10,7 @@ export type PaymentStep =
     | 'select-method'      // Escolha do método (PIX ou Cartão)
     | 'processing'         // Gerando cobrança
     | 'pix-display'        // Exibindo QR Code PIX (com polling)
+    | 'pix-timeout'        // Polling PIX expirou — usuário pode retomar ou cancelar
     | 'payment-confirmed'  // Pagamento confirmado
     | 'redirect-card'      // Redirecionando para checkout
     | 'error';             // Erro
