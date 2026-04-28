@@ -9,6 +9,7 @@ interface AuthStore extends AuthState {
   setHasHydrated: (state: boolean) => void;
   login: (credentials: LoginCredentials) => Promise<{ success: boolean; error?: AuthError }>;
   logout: () => Promise<void>;
+  refreshToken: () => Promise<boolean>;
   loadUser: () => Promise<void>;
   loadCompany: () => Promise<void>;
   setLoading: (loading: boolean) => void;
@@ -84,6 +85,24 @@ export const useAuth = create<AuthStore>()(
         });
       },
 
+      refreshToken: async () => {
+        const currentState = get();
+        if (!currentState.refresh_token) return false;
+        try {
+          const response = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: currentState.refresh_token }),
+          });
+          if (!response.ok) return false;
+          const { token, refresh_token: newRefresh } = await response.json();
+          set({ token, refresh_token: newRefresh });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
       loadUser: async () => {
         const currentState = get();
         if (!currentState.isAuthenticated || !currentState.token) {
@@ -101,15 +120,20 @@ export const useAuth = create<AuthStore>()(
             const data = await response.json();
             set({ user: data.user, isLoading: false });
           } else if (response.status === 401) {
-            // Token expirado ou inválido — deslogar
-            set({
-              user: null,
-              company: null,
-              token: null,
-              refresh_token: null,
-              isAuthenticated: false,
-              isLoading: false,
-            });
+            // Token expirado — tentar renovar antes de deslogar
+            const refreshed = await get().refreshToken();
+            if (!refreshed) {
+              set({
+                user: null,
+                company: null,
+                token: null,
+                refresh_token: null,
+                isAuthenticated: false,
+                isLoading: false,
+              });
+            } else {
+              set({ isLoading: false });
+            }
           } else {
             set({ isLoading: false });
           }

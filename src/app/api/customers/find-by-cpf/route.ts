@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateAuth, AuthError } from '@/lib/auth-helpers';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(request: NextRequest) {
     try {
         const auth = await validateAuth(request);
         if (auth instanceof AuthError) return auth.toResponse();
 
-        const { companyId, supabase } = auth;
+        const { companyId } = auth;
+        const supabaseAdmin = getSupabaseAdmin();
         const searchParams = request.nextUrl.searchParams;
         let cpf = searchParams.get('cpf');
 
@@ -17,8 +19,8 @@ export async function GET(request: NextRequest) {
         // Limpar CPF
         cpf = cpf.replace(/[.-]/g, '');
 
-        // Buscar profile pelo CPF
-        const { data: profile, error: profileError } = await supabase
+        // Buscar profile pelo CPF (admin client — validateAuth já garantiu o caller é dono de empresa)
+        const { data: profile, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select('id, full_name, cpf, phone, birth_date, created_at, avatar_url')
             .eq('cpf', cpf)
@@ -29,7 +31,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Buscar saldo do cliente nesta empresa
-        const { data: balance } = await supabase
+        const { data: balance } = await supabaseAdmin
             .from('cashback_balances')
             .select('current_balance, last_purchase_date')
             .eq('company_id', companyId)
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
             .maybeSingle();
 
         // Buscar estatísticas de transações
-        const { data: transactions } = await supabase
+        const { data: transactions } = await supabaseAdmin
             .from('transactions')
             .select('total_amount, cashback_earned')
             .eq('company_id', companyId)

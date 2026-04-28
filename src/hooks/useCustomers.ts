@@ -127,6 +127,12 @@ export function useCustomers() {
         }
       });
 
+      if (response.status === 401) {
+        useAuth.getState().logout();
+        window.location.href = '/login';
+        return null;
+      }
+
       if (!response.ok) return null;
 
       const { balance, profile, transactions } = await response.json();
@@ -179,6 +185,12 @@ export function useCustomers() {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (response.status === 401) {
+        useAuth.getState().logout();
+        window.location.href = '/login';
+        return null;
+      }
 
       if (!response.ok) return null;
 
