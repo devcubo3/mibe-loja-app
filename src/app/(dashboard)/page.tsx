@@ -29,7 +29,7 @@ export default function HomePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md mb-lg">
         <StatCard
           title="Vendas Hoje"
-          value={isLoading ? '...' : stats?.salesToday.toString() || '0'}
+          value={isLoading ? '...' : stats?.salesTodayCount.toString() || '0'}
           icon={ShoppingBag}
           variant="purple"
           trend={

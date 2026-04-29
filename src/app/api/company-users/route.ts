@@ -60,9 +60,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Senha deve ter no mínimo 6 caracteres' }, { status: 400 });
   }
 
-  const supabase = getSupabaseAdmin();
+  const adminClient = getSupabaseAdmin();
 
-  const { data: created, error: createError } = await supabase.auth.admin.createUser({
+  const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email: body.email,
     password: body.password,
     email_confirm: true,
@@ -79,7 +79,10 @@ export async function POST(request: NextRequest) {
 
   const userId = created.user.id;
 
-  const { data: profile, error: profileError } = await supabase
+  // Usa o client autenticado com JWT do owner para o INSERT do profile.
+  // Passa pela policy "owner_can_insert_company_staff" em vez de depender
+  // do bypass de service_role, que pode ser afetado pelo auth state do singleton.
+  const { data: profile, error: profileError } = await auth.supabase
     .from('profiles')
     .insert({
       id: userId,
@@ -87,14 +90,15 @@ export async function POST(request: NextRequest) {
       role: 'company_staff',
       company_id: auth.companyId,
       is_active: true,
+      onboarding_completed: true,
     })
     .select('id, full_name, company_id, is_active, created_at')
     .single();
 
   if (profileError) {
-    await supabase.auth.admin.deleteUser(userId);
+    await adminClient.auth.admin.deleteUser(userId);
     console.error('Error creating staff profile:', profileError);
-    return NextResponse.json({ error: 'Erro ao criar perfil do funcionário' }, { status: 500 });
+    return NextResponse.json({ error: `Erro ao criar perfil: ${profileError.message}` }, { status: 500 });
   }
 
   return NextResponse.json({
