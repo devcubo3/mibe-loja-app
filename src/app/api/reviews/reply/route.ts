@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAuth, AuthError } from '@/lib/auth-helpers';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { validateAuth, requireOwner, AuthError } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
     try {
         const auth = await validateAuth(request);
         if (auth instanceof AuthError) return auth.toResponse();
+        const ownerCheck = requireOwner(auth);
+        if (ownerCheck) return ownerCheck.toResponse();
 
         const { companyId, supabase } = auth;
         const body = await request.json();

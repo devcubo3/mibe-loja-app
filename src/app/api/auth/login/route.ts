@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Autenticar via Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -29,10 +28,9 @@ export async function POST(request: NextRequest) {
 
     const userId = authData.user.id;
 
-    // Buscar profile para verificar role
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, role, onboarding_completed, created_at')
+      .select('id, full_name, role, company_id, is_active, onboarding_completed, created_at')
       .eq('id', userId)
       .single();
 
@@ -43,14 +41,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (profile.role !== 'company_owner') {
+    if (profile.role !== 'company_owner' && profile.role !== 'company_staff') {
       return NextResponse.json(
-        { error: 'Este login é exclusivo para lojistas' },
+        { error: 'Este login é exclusivo para lojistas e funcionários' },
         { status: 403 }
       );
     }
 
-    // Buscar empresa vinculada
+    if (!profile.is_active) {
+      return NextResponse.json(
+        { error: 'Usuário desativado. Entre em contato com o lojista.' },
+        { status: 403 }
+      );
+    }
+
+    let companyId: string | null = null;
+    if (profile.role === 'company_owner') {
+      const { data: ownedCompany } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('owner_id', userId)
+        .single();
+      companyId = ownedCompany?.id ?? null;
+    } else {
+      companyId = profile.company_id;
+    }
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'Empresa não vinculada a este usuário' },
+        { status: 404 }
+      );
+    }
+
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select(`
@@ -72,7 +95,7 @@ export async function POST(request: NextRequest) {
         latitude,
         longitude
       `)
-      .eq('owner_id', userId)
+      .eq('id', companyId)
       .single();
 
     if (companyError || !company) {
@@ -82,7 +105,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar categoria da empresa
     let categoryName = 'Outros';
     if (company.category_id) {
       const { data: category } = await supabase
@@ -96,13 +118,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Buscar fotos da galeria
     const { data: gallery } = await supabase
       .from('company_gallery')
       .select('photo_url')
       .eq('company_id', company.id);
 
-    // Buscar média de avaliações
     const { data: reviewsData } = await supabase
       .from('reviews')
       .select('rating')
@@ -122,6 +142,7 @@ export async function POST(request: NextRequest) {
         name: profile.full_name,
         email: authData.user.email,
         company_id: company.id,
+        role: profile.role,
         onboarding_completed: profile.onboarding_completed || false,
         created_at: profile.created_at,
       },

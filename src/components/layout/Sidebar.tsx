@@ -13,12 +13,15 @@ import {
   LogOut,
   X,
   MessageCircle,
+  UserCog,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { cn } from '@/lib/utils';
+import type { CompanyRole } from '@/types/auth';
 
 interface SidebarProps {
   storeName?: string;
+  role?: CompanyRole;
   isOpen?: boolean;
   onClose?: () => void;
   onLogout?: () => void;
@@ -50,11 +53,19 @@ const menuItems = [
     label: 'Empresa',
     href: '/empresa',
     icon: Building2,
+    ownerOnly: true,
+  },
+  {
+    label: 'Equipe',
+    href: '/equipe',
+    icon: UserCog,
+    ownerOnly: true,
   },
   {
     label: 'Planos',
     href: '/planos',
     icon: CreditCard,
+    ownerOnly: true,
   },
 ];
 
@@ -73,6 +84,7 @@ const bottomMenuItems = [
 
 export function Sidebar({
   storeName = 'Minha Loja',
+  role,
   isOpen = false,
   onClose,
   onLogout,
@@ -83,6 +95,8 @@ export function Sidebar({
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
+
+  const visibleMenu = menuItems.filter((item) => !item.ownerOnly || role === 'company_owner');
 
   return (
     <>
@@ -124,7 +138,7 @@ export function Sidebar({
         {/* Navigation */}
         <nav className="flex-1 p-md overflow-y-auto">
           <ul className="space-y-xs">
-            {menuItems.map((item) => {
+            {visibleMenu.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
 

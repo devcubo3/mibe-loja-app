@@ -7,12 +7,12 @@ export async function GET(request: NextRequest) {
     const auth = await validateAuth(request);
     if (auth instanceof AuthError) return auth.toResponse();
 
-    const { userId, companyId } = auth;
+    const { userId, companyId, role } = auth;
     const supabase = getSupabaseAdmin();
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('id, full_name, role, onboarding_completed, created_at')
+      .select('id, full_name, onboarding_completed, created_at')
       .eq('id', userId)
       .single();
 
@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
-    // Buscar email do auth.users
     const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId);
 
     return NextResponse.json({
@@ -29,6 +28,7 @@ export async function GET(request: NextRequest) {
         name: profile.full_name,
         email: authUser?.email || '',
         company_id: companyId,
+        role,
         onboarding_completed: profile.onboarding_completed || false,
         created_at: profile.created_at,
       },

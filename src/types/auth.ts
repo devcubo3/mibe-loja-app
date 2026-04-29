@@ -1,10 +1,12 @@
-// Usuário do estabelecimento (via profiles com role = company_owner)
+export type CompanyRole = 'company_owner' | 'company_staff';
+
+// Usuário autenticado no painel da loja (owner ou staff via profiles)
 export interface CompanyUser {
   id: string;
   name: string;
   email: string;
   company_id: string;
-  role?: string;
+  role: CompanyRole;
   onboarding_completed?: boolean;
   created_at: string | null;
 }

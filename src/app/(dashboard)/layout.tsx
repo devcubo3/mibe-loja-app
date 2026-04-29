@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { MobileNav } from '@/components/layout/MobileNav';
@@ -11,23 +11,33 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Skeleton } from '@/components/ui';
 
+const OWNER_ONLY_PATHS = ['/empresa', '/equipe', '/planos'];
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { company, user, token, isLoading, isAuthenticated, logout, updateUser, _hasHydrated } = useAuth();
   const { unreadCount } = useNotifications();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    // Só redireciona após a hydration do Zustand e após carregar o estado
     if (_hasHydrated && !isLoading && !isAuthenticated) {
       router.push('/login');
     }
   }, [_hasHydrated, isLoading, isAuthenticated, router]);
+
+  // Bloqueia staff de acessar páginas exclusivas do owner
+  useEffect(() => {
+    if (!_hasHydrated || isLoading || !isAuthenticated || !user) return;
+    if (user.role === 'company_staff' && OWNER_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
+      router.replace('/');
+    }
+  }, [_hasHydrated, isLoading, isAuthenticated, user, pathname, router]);
 
   // Mostrar onboarding se não foi concluído
   useEffect(() => {
@@ -63,6 +73,7 @@ export default function DashboardLayout({
       {/* Sidebar */}
       <Sidebar
         storeName={company?.business_name || 'Minha Loja'}
+        role={user?.role}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onLogout={handleLogout}
