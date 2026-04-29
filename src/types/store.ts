@@ -58,7 +58,6 @@ export interface Review {
 
 export const STORE_CATEGORIES = [
   'Alimentação',
-  'Outros',
   'Saúde',
   'Casa',
   'Beleza',
@@ -69,6 +68,7 @@ export const STORE_CATEGORIES = [
   'Viagem',
   'Serviços',
   'Tecnologia',
+  'Outros',
 ] as const;
 
 export type StoreCategory = (typeof STORE_CATEGORIES)[number];

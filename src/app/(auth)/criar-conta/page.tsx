@@ -43,7 +43,6 @@ const CATEGORIES = [
   { id: '1', name: 'Alimentação' },
   { id: '5', name: 'Beleza' },
   { id: '4', name: 'Casa' },
-  { id: '2', name: 'Outros' },
   { id: '8', name: 'Educação' },
   { id: '6', name: 'Fitness' },
   { id: '9', name: 'Lazer' },
@@ -52,6 +51,7 @@ const CATEGORIES = [
   { id: '11', name: 'Serviços' },
   { id: '12', name: 'Tecnologia' },
   { id: '10', name: 'Viagem' },
+  { id: '2', name: 'Outros' },
 ];
 
 // ─── Máscara CNPJ ──────────────────────────────────────────
