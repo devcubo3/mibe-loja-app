@@ -97,6 +97,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          abacate_customer_id: string | null
           address: string | null
           business_name: string
           cashback_percent: number | null
@@ -122,6 +123,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          abacate_customer_id?: string | null
           address?: string | null
           business_name: string
           cashback_percent?: number | null
@@ -147,6 +149,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          abacate_customer_id?: string | null
           address?: string | null
           business_name?: string
           cashback_percent?: number | null

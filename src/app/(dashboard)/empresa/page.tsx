@@ -27,6 +27,10 @@ export default function EmpresaPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(true);
 
+  const avgRating = reviews.length > 0
+    ? Math.round(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length * 10) / 10
+    : 0;
+
   useEffect(() => {
     async function loadReviews() {
       if (!company?.id) return;
@@ -161,10 +165,18 @@ export default function EmpresaPage() {
               {company.business_name}
             </h1>
             <div className="flex items-center gap-sm mt-xs">
-              <StarRating rating={company.rating || 4.8} size="md" showValue />
-              <span className="text-caption text-text-muted">
-                ({company.total_reviews || 127} avaliações)
-              </span>
+              {isLoadingReviews ? (
+                <span className="text-caption text-text-muted">Carregando...</span>
+              ) : reviews.length > 0 ? (
+                <>
+                  <StarRating rating={avgRating} size="md" showValue />
+                  <span className="text-caption text-text-muted">
+                    ({reviews.length} avaliações)
+                  </span>
+                </>
+              ) : (
+                <span className="text-caption text-text-muted">Sem avaliações ainda</span>
+              )}
             </div>
           </div>
           <Badge variant="dark">{company.category || 'Alimentação'}</Badge>
@@ -308,7 +320,7 @@ export default function EmpresaPage() {
         <section className="mb-lg">
           <div className="flex items-center justify-between mb-md">
             <h2 className="section-title">
-              Avaliações ({company.total_reviews || reviews.length})
+              Avaliações ({reviews.length})
             </h2>
             <button className="flex items-center gap-1 text-primary hover:underline">
               <span className="text-sm font-medium">Ver todas</span>

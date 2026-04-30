@@ -29,6 +29,11 @@ const userSchema = z
   .object({
     name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
     email: z.string().email('E-mail inválido'),
+    phone: z
+      .string()
+      .min(14, 'Telefone inválido')
+      .transform((v) => v.replace(/\D/g, ''))
+      .refine((v) => v.length >= 10 && v.length <= 11, 'Telefone inválido'),
     password: z.string().min(8, 'Senha deve ter no mínimo 8 caracteres'),
     confirm_password: z.string().min(1, 'Confirme a senha'),
   })
@@ -55,6 +60,19 @@ const CATEGORIES = [
   { id: '10', name: 'Viagem' },
   { id: '2', name: 'Outros' },
 ];
+
+// ─── Máscara Telefone ───────────────────────────────────────
+function formatPhoneInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/^(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  }
+  return digits
+    .replace(/^(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2');
+}
 
 // ─── Máscara CNPJ ──────────────────────────────────────────
 function formatCnpj(value: string) {
@@ -137,7 +155,7 @@ export default function CriarContaPage() {
   // Step 2 form — Usuário
   const userForm = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
-    defaultValues: { name: '', email: '', password: '', confirm_password: '' },
+    defaultValues: { name: '', email: '', phone: '', password: '', confirm_password: '' },
   });
 
   // ─── Handlers ───────────────────────────────────────────
@@ -165,6 +183,7 @@ export default function CriarContaPage() {
           user: {
             name: data.name,
             email: data.email,
+            phone: data.phone,
             password: data.password,
           },
         }),
@@ -296,6 +315,18 @@ export default function CriarContaPage() {
               placeholder="seu@email.com"
               error={userForm.formState.errors.email?.message}
               {...userForm.register('email')}
+            />
+
+            <Input
+              label="Telefone"
+              type="tel"
+              placeholder="(11) 99999-9999"
+              error={userForm.formState.errors.phone?.message}
+              {...userForm.register('phone', {
+                onChange: (e) => {
+                  e.target.value = formatPhoneInput(e.target.value);
+                },
+              })}
             />
 
             <Input

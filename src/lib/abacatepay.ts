@@ -85,9 +85,9 @@ export async function createPixQrCode(params: {
     description?: string; // max 37 chars
     customer?: {
         name: string;
-        cellphone: string;
+        cellphone?: string;
         email: string;
-        taxId: string; // CPF ou CNPJ
+        taxId?: string; // CPF ou CNPJ
     };
     metadata?: Record<string, string>;
 }): Promise<{ success: true; data: AbacatePixQrCode } | { success: false; error: string }> {
@@ -150,14 +150,14 @@ export async function createCardCheckout(params: {
     completionUrl?: string; // URL após pagamento confirmado
     customer?: {
         name: string;
-        cellphone: string;
+        cellphone?: string;
         email: string;
-        taxId: string;
+        taxId?: string;
     };
     metadata?: Record<string, string>;
 }): Promise<{ success: true; data: AbacateBilling } | { success: false; error: string }> {
     try {
-        const body = {
+        const body: Record<string, unknown> = {
             frequency: 'ONE_TIME',
             methods: ['CARD'],
             products: [
@@ -170,9 +170,12 @@ export async function createCardCheckout(params: {
             ],
             returnUrl: params.returnUrl,
             completionUrl: params.completionUrl,
-            customer: params.customer,
             metadata: params.metadata,
         };
+
+        if (params.customer) {
+            body.customer = params.customer;
+        }
 
         const response = await fetch(`${ABACATEPAY_BASE_URL}/billing/create`, {
             method: 'POST',

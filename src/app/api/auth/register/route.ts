@@ -30,6 +30,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const phoneDigits = (user.phone || '').replace(/\D/g, '');
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      return NextResponse.json(
+        { error: 'Telefone inválido' },
+        { status: 400 }
+      );
+    }
+
     if (user.password.length < 8) {
       return NextResponse.json(
         { error: 'Senha deve ter no mínimo 8 caracteres' },
@@ -95,6 +103,7 @@ export async function POST(request: NextRequest) {
         id: userId,
         full_name: user.name.trim(),
         cpf: null,
+        phone: phoneDigits,
         role: 'company_owner',
         onboarding_completed: false,
       });
@@ -137,6 +146,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Criar customer no AbacatePay (não-bloqueante)
+    const abacateApiKey = process.env.ABACATEPAY_API_KEY;
+    if (abacateApiKey) {
+      try {
+        const formattedPhone = phoneDigits.length === 11
+          ? `(${phoneDigits.slice(0, 2)}) ${phoneDigits.slice(2, 7)}-${phoneDigits.slice(7)}`
+          : `(${phoneDigits.slice(0, 2)}) ${phoneDigits.slice(2, 6)}-${phoneDigits.slice(6)}`;
+
+        const customerRes = await fetch('https://api.abacatepay.com/v1/customer/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${abacateApiKey}`,
+          },
+          body: JSON.stringify({
+            name: user.name.trim(),
+            email: user.email.trim().toLowerCase(),
+            taxId: cnpjClean,
+            cellphone: formattedPhone,
+          }),
+        });
+
+        const customerJson = await customerRes.json();
+        if (customerRes.ok && customerJson.data?.id) {
+          await supabase
+            .from('companies')
+            .update({ abacate_customer_id: customerJson.data.id })
+            .eq('id', newCompany.id);
+        } else {
+          console.error('[AbacatePay] Erro ao criar customer no cadastro:', JSON.stringify(customerJson));
+        }
+      } catch (err) {
+        console.error('[AbacatePay] Falha ao criar customer no cadastro:', err);
+      }
+    }
+
     // Fazer login para obter session tokens
     // Usar client separado com anon key (não o admin singleton) para evitar
     // corromper o state interno do client admin compartilhado
@@ -177,6 +222,7 @@ export async function POST(request: NextRequest) {
         name: user.name.trim(),
         email: user.email.trim().toLowerCase(),
         company_id: newCompany.id,
+        role: 'company_owner',
         onboarding_completed: false,
         created_at: new Date().toISOString(),
       },

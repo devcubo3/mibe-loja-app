@@ -429,6 +429,7 @@ export default function RegisterSalePage() {
         <SaleForm
           customer={customer}
           cashbackPercentage={company.cashback_percent}
+          minPurchaseValue={company.min_purchase_value ?? 0}
           onConfirm={handleConfirmSale}
           onCancel={handleCancel}
           isLoading={isLoading}

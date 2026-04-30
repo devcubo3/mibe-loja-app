@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
         const auth = await validateAuth(request);
         if (auth instanceof AuthError) return auth.toResponse();
 
-        const { companyId, supabase } = auth;
+        const { companyId } = auth;
+        const supabaseAdmin = getSupabaseAdmin();
         const searchParams = request.nextUrl.searchParams;
         const id = searchParams.get('id');
 
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'ID da venda é obrigatório' }, { status: 400 });
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from('transactions')
             .select(`
         id,

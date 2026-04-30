@@ -15,6 +15,7 @@ import type { PaymentMethodType } from '@/types/sale';
 interface SaleFormProps {
   customer: CustomerWithBalance;
   cashbackPercentage: number;
+  minPurchaseValue?: number;
   onConfirm: (data: SaleData) => void | Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
@@ -38,6 +39,7 @@ const PAYMENT_METHODS: { value: PaymentMethodType; label: string; icon: React.Re
 export function SaleForm({
   customer,
   cashbackPercentage,
+  minPurchaseValue = 0,
   onConfirm,
   onCancel,
   isLoading,
@@ -57,7 +59,8 @@ export function SaleForm({
     : 0;
 
   const amountPaid = Math.max(purchaseAmount - balanceUsed, 0);
-  const cashbackGenerated = (amountPaid * cashbackPercentage) / 100;
+  const meetsMinimum = minPurchaseValue <= 0 || purchaseAmount >= minPurchaseValue;
+  const cashbackGenerated = meetsMinimum ? (amountPaid * cashbackPercentage) / 100 : 0;
 
   useEffect(() => {
     if (useBalance) {
@@ -209,6 +212,12 @@ export function SaleForm({
               <span>Cashback gerado ({cashbackPercentage}%):</span>
               <span>+ {formatCurrency(cashbackGenerated)}</span>
             </div>
+
+            {!meetsMinimum && minPurchaseValue > 0 && (
+              <p className="text-caption text-error">
+                Compra mínima para cashback: {formatCurrency(minPurchaseValue)}
+              </p>
+            )}
           </div>
         </>
       )}

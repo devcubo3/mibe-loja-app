@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
       supabaseAdmin
         .from('companies')
-        .select('is_active')
+        .select('is_active, min_purchase_value')
         .eq('id', companyId)
         .single(),
     ]);
@@ -86,6 +86,9 @@ export async function POST(request: NextRequest) {
     const subscription = subscriptionResult.data;
     const commissionPercent = (subscription.plans as any)?.commission_percent ?? 0;
 
+    const minPurchase = companyResult.data?.min_purchase_value ?? 0;
+    const effectiveCashback = (minPurchase > 0 && net_amount_paid < minPurchase) ? 0 : cashback_earned;
+
     // Inserir transação com admin client (bypassa RLS)
     const { data: newSale, error: insertError } = await supabaseAdmin
       .from('transactions')
@@ -95,7 +98,7 @@ export async function POST(request: NextRequest) {
         total_amount,
         cashback_redeemed: cashback_redeemed || 0,
         net_amount_paid,
-        cashback_earned,
+        cashback_earned: effectiveCashback,
         payment_method: finalPaymentMethod,
       })
       .select(`

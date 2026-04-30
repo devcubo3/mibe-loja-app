@@ -134,6 +134,16 @@ export const useAuth = create<AuthStore>()(
             } else {
               set({ isLoading: false });
             }
+          } else if (response.status === 403) {
+            // Usuário desativado enquanto logado — forçar logout
+            set({
+              user: null,
+              company: null,
+              token: null,
+              refresh_token: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
           } else {
             set({ isLoading: false });
           }
