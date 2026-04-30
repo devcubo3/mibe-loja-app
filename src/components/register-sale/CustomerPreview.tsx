@@ -2,7 +2,7 @@
 
 import { Lock, AlertCircle } from 'lucide-react';
 import { Avatar, Badge, Button, Card } from '@/components/ui';
-import { formatCPF, formatCurrency, formatDate } from '@/lib/formatters';
+import { formatCurrency } from '@/lib/formatters';
 import type { CustomerWithBalance } from '@/types/customer';
 
 interface CustomerPreviewProps {
@@ -47,20 +47,12 @@ export function CustomerPreview({
             <p className="text-body-lg font-semibold text-white">
               {customer.full_name}
             </p>
-            <Badge variant="light">{formatCPF(customer.cpf)}</Badge>
           </div>
         </div>
 
         {/* Info Fields */}
         <div className="space-y-md">
           <InfoField label="Nome completo" value={customer.full_name} />
-          <InfoField label="CPF" value={formatCPF(customer.cpf)} />
-          {customer.birth_date && (
-            <InfoField
-              label="Data de Nascimento"
-              value={formatDate(customer.birth_date)}
-            />
-          )}
 
           {/* Balance */}
           <div className="bg-success-light rounded-md p-md flex items-center justify-between">

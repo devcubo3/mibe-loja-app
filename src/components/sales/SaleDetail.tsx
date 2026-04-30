@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { Avatar, Badge, Card, Button } from '@/components/ui';
 import {
-  formatCPF,
   formatCurrency,
   formatDateTime,
 } from '@/lib/formatters';
@@ -51,9 +50,6 @@ export function SaleDetail({ sale }: SaleDetailProps) {
               <Avatar name={sale.customer?.full_name || 'Cliente'} size="md" src={sale.customer?.avatar_url || undefined} />
               <div>
                 <p className="font-semibold">{sale.customer?.full_name || 'Cliente'}</p>
-                <p className="text-caption text-text-secondary">
-                  CPF: {formatCPF(sale.customer?.cpf || '')}
-                </p>
               </div>
             </div>
             {sale.customer?.id && (

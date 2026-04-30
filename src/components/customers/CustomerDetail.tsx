@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { Lock, AlertCircle, ChevronRight } from 'lucide-react';
-import { Avatar, Badge, Card } from '@/components/ui';
+import { Avatar, Card } from '@/components/ui';
 import {
-  formatCPF,
   formatCurrency,
   formatDate,
   formatPhone,
@@ -39,20 +38,12 @@ export function CustomerDetail({ customer, recentSales }: CustomerDetailProps) {
             <p className="text-body-lg font-semibold text-white">
               {customer.full_name}
             </p>
-            <Badge variant="light">{formatCPF(customer.cpf)}</Badge>
           </div>
         </div>
 
         {/* Info Fields */}
         <div className="p-lg space-y-md">
           <InfoField label="Nome completo" value={customer.full_name} />
-          <InfoField label="CPF" value={formatCPF(customer.cpf)} />
-          {customer.birth_date && (
-            <InfoField
-              label="Data de Nascimento"
-              value={formatDate(customer.birth_date)}
-            />
-          )}
           {customer.phone && (
             <InfoField label="Telefone" value={formatPhone(customer.phone)} />
           )}

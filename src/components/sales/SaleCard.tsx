@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { ChevronRight, Banknote, QrCode, CreditCard, AlertCircle } from 'lucide-react';
 import { Avatar, Badge, Card } from '@/components/ui';
 import {
-  formatCPF,
   formatCurrency,
   formatDate,
   formatTime,
@@ -39,9 +38,6 @@ export function SaleCard({ sale }: SaleCardProps) {
             <div>
               <p className="font-semibold text-text-primary">
                 {sale.customer?.full_name || 'Cliente'}
-              </p>
-              <p className="text-caption text-text-secondary">
-                CPF: {formatCPF(sale.customer?.cpf || '')}
               </p>
             </div>
           </div>

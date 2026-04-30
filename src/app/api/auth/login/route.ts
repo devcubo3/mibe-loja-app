@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
@@ -12,9 +13,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseAdmin();
-
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    // Usar client separado com anon key para não corromper o singleton admin compartilhado.
+    const authClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
       email,
       password,
     });
@@ -27,6 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = authData.user.id;
+    const supabase = getSupabaseAdmin();
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')

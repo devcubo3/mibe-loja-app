@@ -7,7 +7,6 @@ import {
   formatCurrency,
   formatCurrencyInput,
   parseCurrencyInput,
-  formatCPF,
 } from '@/lib/formatters';
 import { Banknote, QrCode, CreditCard } from 'lucide-react';
 import type { CustomerWithBalance } from '@/types/customer';
@@ -108,9 +107,6 @@ export function SaleForm({
       <div className="bg-input-bg rounded-md p-md">
         <p className="text-caption text-text-muted">Cliente</p>
         <p className="font-semibold">{customer.full_name}</p>
-        <p className="text-body text-text-secondary">
-          CPF: {formatCPF(customer.cpf)}
-        </p>
       </div>
 
       {/* Purchase Value */}

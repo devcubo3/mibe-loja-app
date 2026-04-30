@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { Avatar, Card } from '@/components/ui';
-import { formatCPF, formatCurrency, formatDate } from '@/lib/formatters';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 import type { CustomerWithBalance } from '@/types/customer';
 
 interface CustomerCardProps {
@@ -27,9 +27,6 @@ export function CustomerCard({ customer }: CustomerCardProps) {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-text-primary truncate">
               {customer.full_name}
-            </p>
-            <p className="text-caption text-text-secondary">
-              CPF: {formatCPF(customer.cpf)}
             </p>
           </div>
         </div>
