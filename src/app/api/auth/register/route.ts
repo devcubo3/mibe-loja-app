@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { validateCNPJ } from '@/lib/formatters';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,6 +41,13 @@ export async function POST(request: NextRequest) {
 
     // Verificar se já existe empresa com esse CNPJ
     const cnpjClean = company.cnpj.replace(/\D/g, '');
+
+    if (!validateCNPJ(cnpjClean)) {
+      return NextResponse.json(
+        { error: 'CNPJ inválido' },
+        { status: 400 }
+      );
+    }
     const { data: existingCompany } = await supabase
       .from('companies')
       .select('id')

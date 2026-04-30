@@ -11,6 +11,7 @@ import { ArrowLeft, ArrowRight, Building2, User, Check } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
+import { validateCNPJ } from '@/lib/formatters';
 
 // ─── Schemas ────────────────────────────────────────────────
 const companySchema = z.object({
@@ -19,7 +20,8 @@ const companySchema = z.object({
     .string()
     .min(14, 'CNPJ inválido')
     .transform((v) => v.replace(/\D/g, ''))
-    .refine((v) => v.length === 14, 'CNPJ deve ter 14 dígitos'),
+    .refine((v) => v.length === 14, 'CNPJ deve ter 14 dígitos')
+    .refine((v) => validateCNPJ(v), 'CNPJ inválido'),
   category_id: z.string().optional(),
 });
 

@@ -249,6 +249,24 @@ export function parseBirthDateInput(value: string): string {
   return '';
 }
 
+export function validateCNPJ(cnpj: string): boolean {
+  const c = cnpj.replace(/\D/g, '');
+  if (c.length !== 14) return false;
+  if (/^(\d)\1+$/.test(c)) return false;
+
+  const calc = (digits: string, weights: number[]) => {
+    const sum = digits.split('').reduce((acc, d, i) => acc + parseInt(d) * weights[i], 0);
+    const rem = sum % 11;
+    return rem < 2 ? 0 : 11 - rem;
+  };
+
+  const d1 = calc(c.slice(0, 12), [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  if (d1 !== parseInt(c[12])) return false;
+
+  const d2 = calc(c.slice(0, 13), [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  return d2 === parseInt(c[13]);
+}
+
 /**
  * Converte data ISO para DD/MM/AAAA
  * @param value - Data ISO (YYYY-MM-DD)

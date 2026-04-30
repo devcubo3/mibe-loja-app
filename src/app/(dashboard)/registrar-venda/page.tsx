@@ -333,6 +333,16 @@ export default function RegisterSalePage() {
           totalAmount={totalSelectedAmount}
           onPaymentComplete={reloadStatus}
         />
+
+        {selectedPlanForTrial && (
+          <TrialConfirmationModal
+            isOpen={trialModalOpen}
+            onClose={() => setTrialModalOpen(false)}
+            plan={selectedPlanForTrial}
+            onConfirm={() => handleSubscribe(selectedPlanForTrial)}
+            isLoading={isSubscribing}
+          />
+        )}
       </div>
     );
   }
