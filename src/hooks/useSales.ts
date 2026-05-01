@@ -70,9 +70,7 @@ export function useSales() {
         customer: t.profiles ? {
           id: t.profiles.id,
           full_name: t.profiles.full_name,
-          cpf: t.profiles.cpf,
           phone: t.profiles.phone,
-          birth_date: t.profiles.birth_date,
           created_at: t.profiles.created_at,
           avatar_url: t.profiles.avatar_url,
         } : null,
@@ -147,9 +145,7 @@ export function useSales() {
         customer: t.profiles ? {
           id: t.profiles.id,
           full_name: t.profiles.full_name,
-          cpf: t.profiles.cpf,
           phone: t.profiles.phone,
-          birth_date: t.profiles.birth_date,
           created_at: t.profiles.created_at,
           avatar_url: t.profiles.avatar_url,
         } : null,
@@ -159,8 +155,7 @@ export function useSales() {
       if (search) {
         const searchLower = search.toLowerCase().replace(/[.-]/g, '');
         formattedSales = formattedSales.filter(sale =>
-          sale.customer?.full_name.toLowerCase().includes(searchLower) ||
-          sale.customer?.cpf.replace(/[.-]/g, '').includes(searchLower)
+          sale.customer?.full_name.toLowerCase().includes(searchLower)
         );
       }
 
@@ -216,9 +211,7 @@ export function useSales() {
         customer: (data as any).profiles ? {
           id: (data as any).profiles.id,
           full_name: (data as any).profiles.full_name,
-          cpf: (data as any).profiles.cpf,
           phone: (data as any).profiles.phone,
-          birth_date: (data as any).profiles.birth_date,
           created_at: (data as any).profiles.created_at,
           avatar_url: (data as any).profiles.avatar_url,
         } : null,

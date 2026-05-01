@@ -33,9 +33,7 @@ export async function GET(request: NextRequest) {
         profiles:user_id (
           id,
           full_name,
-          cpf,
           phone,
-          birth_date,
           created_at,
           avatar_url
         )

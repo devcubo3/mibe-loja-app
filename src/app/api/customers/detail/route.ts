@@ -28,9 +28,7 @@ export async function GET(request: NextRequest) {
         profiles:user_id (
           id,
           full_name,
-          cpf,
           phone,
-          birth_date,
           created_at,
           avatar_url
         )
@@ -43,7 +41,7 @@ export async function GET(request: NextRequest) {
             // Cliente pode não ter saldo ainda, buscar só o profile
             const { data: profile, error: profileError } = await supabaseAdmin
                 .from('profiles')
-                .select('id, full_name, cpf, phone, birth_date, created_at, avatar_url')
+                .select('id, full_name, phone, created_at, avatar_url')
                 .eq('id', id)
                 .single();
 

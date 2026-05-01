@@ -18,9 +18,7 @@ export interface Sale {
 export interface Customer {
   id: string;
   full_name: string;
-  cpf: string;
   phone: string | null;
-  birth_date: string | null;
   created_at: string | null;
   avatar_url?: string | null;
 }

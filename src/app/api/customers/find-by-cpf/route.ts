@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
         // Buscar profile pelo CPF (admin client — validateAuth já garantiu o caller é dono de empresa)
         const { data: profile, error: profileError } = await supabaseAdmin
             .from('profiles')
-            .select('id, full_name, cpf, phone, birth_date, created_at, avatar_url')
+            .select('id, full_name, created_at, avatar_url')
             .eq('cpf', cpf)
             .maybeSingle();
 

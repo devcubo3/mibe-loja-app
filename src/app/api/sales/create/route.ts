@@ -115,9 +115,7 @@ export async function POST(request: NextRequest) {
         profiles:user_id (
           id,
           full_name,
-          cpf,
           phone,
-          birth_date,
           created_at,
           avatar_url
         )
@@ -150,9 +148,7 @@ export async function POST(request: NextRequest) {
         ? {
             id: (newSale as any).profiles.id,
             full_name: (newSale as any).profiles.full_name,
-            cpf: (newSale as any).profiles.cpf,
             phone: (newSale as any).profiles.phone,
-            birth_date: (newSale as any).profiles.birth_date,
             created_at: (newSale as any).profiles.created_at,
             avatar_url: (newSale as any).profiles.avatar_url,
           }

@@ -58,9 +58,7 @@ export function useCustomers() {
           .map((b: any) => ({
             id: b.profiles.id,
             full_name: b.profiles.full_name,
-            cpf: b.profiles.cpf,
             phone: b.profiles.phone,
-            birth_date: b.profiles.birth_date,
             created_at: b.profiles.created_at,
             avatar_url: b.profiles.avatar_url,
             storeBalance: {
@@ -80,7 +78,6 @@ export function useCustomers() {
           formattedCustomers = formattedCustomers.filter(
             customer =>
               customer.full_name.toLowerCase().includes(searchLower) ||
-              customer.cpf?.replace(/[.-]/g, '').includes(searchLower) ||
               customer.phone?.replace(/[()-\s]/g, '').includes(searchLower)
           );
         }
@@ -151,16 +148,14 @@ export function useCustomers() {
       return {
         id: profile.id,
         full_name: profile.full_name,
-        cpf: profile.cpf,
         phone: profile.phone,
-        birth_date: profile.birth_date,
         created_at: profile.created_at,
         avatar_url: profile.avatar_url,
         storeBalance: {
-          customer_id: balance.user_id!,
-          company_id: balance.company_id!,
-          balance: balance.current_balance || 0,
-          last_purchase_date: balance.last_purchase_date,
+          customer_id: balance?.user_id ?? profile.id,
+          company_id: balance?.company_id ?? company.id,
+          balance: balance?.current_balance || 0,
+          last_purchase_date: balance?.last_purchase_date || null,
           ...stats,
         },
       };
@@ -210,9 +205,7 @@ export function useCustomers() {
       return {
         id: profile.id,
         full_name: profile.full_name,
-        cpf: profile.cpf,
         phone: profile.phone,
-        birth_date: profile.birth_date,
         created_at: profile.created_at,
         avatar_url: profile.avatar_url,
         storeBalance: {
